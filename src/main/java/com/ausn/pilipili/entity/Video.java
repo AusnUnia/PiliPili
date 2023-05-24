@@ -1,22 +1,42 @@
-package com.ausn.pilipili.domain;
+package com.ausn.pilipili.entity;
 
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.List;
+
+/*
+create table videos
+(
+ bv varchar(11) primary key ,
+ title varchar(64),
+ authorId varchar(11),
+ views bigint,
+ uploadDate datetime,
+ bulletScreenNum bigint,
+ commentNum bigint,
+ upvoteNum bigint,
+ downvoteNum bigint,
+ coinNum bigint,
+ saveNum bigint,
+ sharesNum bigint,
+ tags varchar(128),
+ videoPath varchar(1024),
+ introduction text
+)
+*/
 
 public class Video {
     private String bv; //视频编号 11位数字或字母
     private String title; //标题
     private String authorId; //作者id
-    private BigInteger views; //播放量
+    private BigInteger viewNum; //播放量
     private Timestamp uploadDate; //上传日期
     private BigInteger bulletScreenNum; //弹幕数量
-    private BigInteger comments; //评论数量
-    private BigInteger upvotes; //点赞数量
-    private BigInteger downvotes; //点踩数量
-    private BigInteger coins; //投币数量
-    private BigInteger saves; //收藏数量
-    private BigInteger shares; //转发数量
+    private BigInteger commentNum; //评论数量
+    private BigInteger upvoteNum; //点赞数量
+    private BigInteger downvoteNum; //点踩数量
+    private BigInteger coinNum; //投币数量
+    private BigInteger saveNum; //收藏数量
+    private BigInteger shareNum; //转发数量
     private String tags; //标签  形如 "标签1,标签2,标签3"
     private String videoPath; //视频存放位置  视频直接存本地，不存数据库
     private String introduction; //视频简介
@@ -45,12 +65,12 @@ public class Video {
         this.authorId = authorId;
     }
 
-    public BigInteger getViews() {
-        return views;
+    public BigInteger getViewNum() {
+        return viewNum;
     }
 
-    public void setViews(BigInteger views) {
-        this.views = views;
+    public void setViewNum(BigInteger viewNum) {
+        this.viewNum = viewNum;
     }
 
     public Timestamp getUploadDate() {
@@ -69,52 +89,52 @@ public class Video {
         this.bulletScreenNum = bulletScreenNum;
     }
 
-    public BigInteger getComments() {
-        return comments;
+    public BigInteger getCommentNum() {
+        return commentNum;
     }
 
-    public void setComments(BigInteger comments) {
-        this.comments = comments;
+    public void setCommentNum(BigInteger commentNum) {
+        this.commentNum = commentNum;
     }
 
-    public BigInteger getUpvotes() {
-        return upvotes;
+    public BigInteger getUpvoteNum() {
+        return upvoteNum;
     }
 
-    public void setUpvotes(BigInteger upvotes) {
-        this.upvotes = upvotes;
+    public void setUpvoteNum(BigInteger upvoteNum) {
+        this.upvoteNum = upvoteNum;
     }
 
-    public BigInteger getDownvotes() {
-        return downvotes;
+    public BigInteger getDownvoteNum() {
+        return downvoteNum;
     }
 
-    public void setDownvotes(BigInteger downvotes) {
-        this.downvotes = downvotes;
+    public void setDownvoteNum(BigInteger downvoteNum) {
+        this.downvoteNum = downvoteNum;
     }
 
-    public BigInteger getCoins() {
-        return coins;
+    public BigInteger getCoinNum() {
+        return coinNum;
     }
 
-    public void setCoins(BigInteger coins) {
-        this.coins = coins;
+    public void setCoinNum(BigInteger coinNum) {
+        this.coinNum = coinNum;
     }
 
-    public BigInteger getSaves() {
-        return saves;
+    public BigInteger getSaveNum() {
+        return saveNum;
     }
 
-    public void setSaves(BigInteger saves) {
-        this.saves = saves;
+    public void setSaveNum(BigInteger saveNum) {
+        this.saveNum = saveNum;
     }
 
-    public BigInteger getShares() {
-        return shares;
+    public BigInteger getShareNum() {
+        return shareNum;
     }
 
-    public void setShares(BigInteger shares) {
-        this.shares = shares;
+    public void setShareNum(BigInteger shareNum) {
+        this.shareNum = shareNum;
     }
 
     public String getTags() {
@@ -142,23 +162,5 @@ public class Video {
     }
 };
 
-/*
-create table videos
-(
- bv varchar(11) primary key ,
- title varchar(128),
- authorId varchar(11),
- views bigint,
- uploadDate datetime,
- bulletScreenNum bigint,
- upvotes bigint,
- downvotes bigint,
- coins bigint,
- save bigint,
- shares bigint,
- tags varchar(128),
- videoPath varchar(1024),
- introduction text
-)
-*/
+
 

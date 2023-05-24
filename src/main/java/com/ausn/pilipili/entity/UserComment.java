@@ -1,8 +1,7 @@
-package com.ausn.pilipili.domain;
+package com.ausn.pilipili.entity;
 
 import java.math.BigInteger;
 import java.sql.Timestamp;
-import java.util.List;
 
 public class UserComment{
     private String bv; //所属视频编号

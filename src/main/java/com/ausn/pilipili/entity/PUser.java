@@ -1,4 +1,4 @@
-package com.ausn.pilipili.domain;
+package com.ausn.pilipili.entity;
 
 import java.sql.Timestamp;
 
