@@ -9,4 +9,44 @@
         #{uploadDate},#{bulletScreenNum},#{commentNum},#{upvoteNum},#{downvoteNum},#{coinNum},
         #{saveNum},#{shareNum},#{tags},#{videoPath},#{introduction})
     </insert>
+
+    <delete id="delete">
+        delete from videos where bv=#{bv}
+    </delete>
+
+    <select id="getByBv" resultType="Video">
+        select * from videos where bv=#{bv}
+    </select>
+
+    <select id="getByAuthorId" resultType="Video">
+        select * from videos where authorId=#{authorId}
+    </select>
+
+    <update id="update">
+        update videos
+        <set>
+            title=#{title},
+            authorId#{authorId},
+            viewNum=#{viewNum},
+            uploadDate=#{uploadDate},
+            bulletScreenNum=#{bulletScreenNum},
+            commentNum=#{commentNum},
+            upvoteNum=#{upvoteNum},
+            downvoteNum=#{downvoteNum},
+            coinNum=#{coinNum},
+            saveNum=#{saveNum},
+            shareNum=#{shareNum},
+            tags=#{tags},
+            videoPath=#{videoPath},
+            introduction=#{introduction}
+        </set>
+        <where>
+            bv=#{bv}
+        </where>
+    </update>
+
+    <!--算法复杂度太高，之后要改进 -->
+    <select id="getRandomly" resultType="Video">
+        select * from videos order by rand() limit 50
+    </select>
 </mapper>

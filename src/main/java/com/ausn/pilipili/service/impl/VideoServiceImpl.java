@@ -20,22 +20,26 @@ public class VideoServiceImpl implements VideoService
     }
 
     @Override
-    public Video getByBv(String bv) {
-        return null;
+    public Video getByBv(String bv)
+    {
+        return videoDao.getByBv(bv);
     }
 
     @Override
-    public Video getByAuthorId(String authorId) {
-        return null;
+    public Video getByAuthorId(String authorId)
+    {
+        return videoDao.getByAuthorId(authorId);
     }
 
     @Override
-    public int update(Video video) {
-        return 0;
+    public int update(Video video)
+    {
+        return videoDao.update(video);
     }
 
     @Override
-    public List<Video> getRandomly() {
-        return null;
+    public List<Video> getRandomly()
+    {
+        return videoDao.getRandomly();
     }
 }

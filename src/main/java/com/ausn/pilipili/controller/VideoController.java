@@ -4,12 +4,11 @@ import com.ausn.pilipili.entity.Video;
 import com.ausn.pilipili.service.VideoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.Mapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/videos")
+@RequestMapping("/video")
 public class VideoController
 {
     @Autowired
@@ -21,5 +20,12 @@ public class VideoController
         video.setBv("auidsas");
         System.out.println(videoService.save(video));
         return "save()";
+    }
+
+    @GetMapping("/BV{bv}")
+    public String getByBv(String bv)
+    {
+        videoService.getByBv(bv);
+        return "getByBv";
     }
 }
