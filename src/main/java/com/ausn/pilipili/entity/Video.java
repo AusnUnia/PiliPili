@@ -160,6 +160,27 @@ public class Video {
     public void setIntroduction(String introduction) {
         this.introduction = introduction;
     }
+
+    @Override
+    public String toString() {
+        return "Video{" +
+                "bv='" + bv + '\'' +
+                ", title='" + title + '\'' +
+                ", authorId='" + authorId + '\'' +
+                ", viewNum=" + viewNum +
+                ", uploadDate=" + uploadDate +
+                ", bulletScreenNum=" + bulletScreenNum +
+                ", commentNum=" + commentNum +
+                ", upvoteNum=" + upvoteNum +
+                ", downvoteNum=" + downvoteNum +
+                ", coinNum=" + coinNum +
+                ", saveNum=" + saveNum +
+                ", shareNum=" + shareNum +
+                ", tags='" + tags + '\'' +
+                ", videoPath='" + videoPath + '\'' +
+                ", introduction='" + introduction + '\'' +
+                '}';
+    }
 };
 
 

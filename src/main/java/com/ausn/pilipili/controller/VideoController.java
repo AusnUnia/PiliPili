@@ -3,29 +3,31 @@ package com.ausn.pilipili.controller;
 import com.ausn.pilipili.entity.Video;
 import com.ausn.pilipili.service.VideoService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/video")
+@RequestMapping("/videos")
 public class VideoController
 {
     @Autowired
     private VideoService videoService;
-    @GetMapping
-    public String save()
+    @PostMapping
+    public Result save(@RequestBody Video video)
     {
-        Video video=new Video();
-        video.setBv("auidsas");
-        System.out.println(videoService.save(video));
-        return "save()";
+        boolean flag=videoService.save(video);
+        int code=flag?ResultCode.SAVE_OK:ResultCode.SAVE_ERR;
+        return new Result(code,"",flag);
     }
 
     @GetMapping("/BV{bv}")
-    public String getByBv(String bv)
+    public Result getByBv(@PathVariable String bv)
     {
-        videoService.getByBv(bv);
-        return "getByBv";
+        Video video=videoService.getByBv(bv);
+        System.out.println(video);
+        if(video!=null)
+        {
+            return new Result(ResultCode.GET_OK,"",video);
+        }
+        return new Result(ResultCode.GET_ERR,"",null);
     }
 }

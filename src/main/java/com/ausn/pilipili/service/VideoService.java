@@ -6,10 +6,10 @@ import java.util.List;
 
 public interface VideoService
 {
-    public int save(Video video);
+    public boolean save(Video video);
     public Video getByBv(String bv);
     public Video getByAuthorId(String authorId);
-    public int update(Video video);
+    public boolean update(Video video);
     public List<Video> getRandomly();
 
 }

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="cn">
+<head>
+    <meta charset="utf-8">
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>PiliPili</title>
+
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+
+    <script src="../js/vue2.js"></script>
+    <script src="../js/axios.js"></script>
+
+</head>
+<body>
+    <div id="app">
+        <video controls :src="video.videoPath"></video>
+
+    </div>
+</body>
+</html>
+
+<script>
+    new Vue({
+        el:"#app",
+        data:
+        {
+            video:{},
+            path:reqire()
+        },
+        create()
+        {
+            console.log("create()");
+            let bv=window.location.href.split("/")[-1];
+            this.getVideoByBv()
+                .then(()=>{
+                    window.alert(this.video);
+                    console.log(this.video);
+                })
+                .then(()=>{
+                    this.loadVideo();
+                });
+            window.alert(this.video);
+        },
+        methods:
+        {
+            getVideoByBv(bv)
+            {
+                axios.get("/videos/"+bv)
+                    .then(res=>{
+                        this.video=res.data.data;
+                    });
+            },
+
+            loadVideo()
+            {
+                this.$refs.cur_video.src=this.video.videoPath;
+            }
+        }
+    })
+</script>

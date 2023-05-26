@@ -14,9 +14,10 @@ public class VideoServiceImpl implements VideoService
     @Autowired
     VideoDao videoDao;
     @Override
-    public int save(Video video)
+    public boolean save(Video video)
     {
-        return videoDao.save(video);
+
+        return videoDao.save(video)>0;
     }
 
     @Override
@@ -32,9 +33,9 @@ public class VideoServiceImpl implements VideoService
     }
 
     @Override
-    public int update(Video video)
+    public boolean update(Video video)
     {
-        return videoDao.update(video);
+        return videoDao.update(video)>0;
     }
 
     @Override
