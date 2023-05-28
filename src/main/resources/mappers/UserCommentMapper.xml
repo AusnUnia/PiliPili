@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ausn.pilipili.dao.UserCommentDao">
+    <insert id="save">
+        insert into user_comments values(#{commentId},#{bv},#{userId},#{sendDate},
+                                  #{content},#{upvoteNum},#{downvoteNum},#{replyNum});
+    </insert>
+
+    <delete id="delete">
+        delete from user_comments where bv=#{bv}
+    </delete>
+
+    <select id="getByBv" resultType="UserComment">
+        select * from user_comments where bv=#{bv}
+    </select>
+
+
+    <update id="update">
+        update user_comments
+        <set>
+            commentId=#{commentId},
+            bv=#{bv},
+            userId=#{userId},
+            sendDate=#{sendDate},
+            content=#{content},
+            upvoteNum=#{upvoteNum},
+            downvoteNum=#{downvoteNum},
+            replyNum=#{replyNum}
+        </set>
+        <where>
+            bv=#{bv}
+        </where>
+    </update>
+
+</mapper>

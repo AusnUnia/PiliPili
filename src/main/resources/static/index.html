@@ -11,9 +11,295 @@
 
     <script src="js/vue2.js"></script>
     <script src="js/axios.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+        }
+        a,
+        ul,
+        li {
+            list-style: none;
+            text-decoration: none;
+            color: #ffffff;
+        }
+        button,
+        input {
+            text-decoration: none;
+            border: none;
+        }
+        input:hover {
+            text-decoration: none;
+        }
+        input,
+        button:focus {
+            text-decoration: none;
+            outline: none;
+            border: none;
+        }
+        .nav {
+            position: relative;
+            margin: 0;
+            padding: 0;
+        }
+        .mini-header-content {
+            color: #ffffff;
+            box-sizing: border-box;
+            padding: 10px 24px;
+            line-height: 30px;
+            position: relative;
+            margin: 0 auto;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            z-index: 100;
+        }
 
+        .nav-link .nav-link-ul {
+            height: 36px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .nav-link .nav-link-ul .nav-link-item {
+            margin-right: 12px;
+        }
+        .nav-link-item-img {
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
+        }
+
+        /* 导航搜索 */
+        .nav-search-box {
+            margin: 0 10px;
+            width: 500px;
+            transition: width 0.3s;
+        }
+        .nav-search {
+            position: relative;
+        }
+        .nav-search #nav-searchform {
+            display: block;
+            padding: 0 38px 0 16px;
+            border: 1px solid hsla(0, 0%, 100%, 0);
+            border-radius: 2px;
+            background-color: #fff;
+        }
+
+        .search-input {
+            width: 431px;
+            height: 32px;
+        }
+        .nav-search .nav-search-keyword {
+            overflow: hidden;
+            width: 100%;
+            height: 34px;
+            border: none;
+            background-color: transparent;
+            box-shadow: none;
+            color: #999;
+            font-size: 14px;
+            line-height: 34px;
+            transition: all 0.2s;
+        }
+        .nav-search .nav-search-btn {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 0;
+            padding: 0;
+            width: 48px;
+            height: 35px;
+            border: none;
+            border-radius: 2px;
+            background: #e7e7e7;
+            line-height: 35px;
+        }
+        .nav-search-btn-img {
+            width: 16px;
+            height: 16px;
+            padding: 8px 16px;
+        }
+
+        /* 用户中心页面 */
+        .nav-user-center {
+            font-size: 14px;
+            display: flex;
+            flex-shrink: 0;
+        }
+        .nav-user-center .user-con {
+            display: flex;
+            align-items: center;
+        }
+        .nav-user-center .user-con .item {
+            position: relative;
+            display: flex;
+            margin-left: 12px;
+            cursor: pointer;
+        }
+        .user-img {
+            width: 32px;
+            height: 32px;
+            border-radius: 20px;
+            vertical-align: middle;
+        }
+        .user-login {
+            line-height: 32px;
+            vertical-align: middle;
+        }
+        .upload {
+            position: relative;
+            color: #fff;
+            font-size: 14px;
+            display: block;
+            width: 100px;
+            height: 36px;
+            line-height: 36px;
+            text-align: center;
+            background: #fb7299;
+            border-radius: 2px;
+            margin-left: 14px;
+        }
+
+        /* 背景图 */
+        .layer {
+            width: 100%;
+            height: 178px;
+            background-image: url(https://i0.hdslb.com/bfs/archive/0b7eef054547750e6bfeff6f36c83e83d2a058fb.png);
+        }
+        .bili-banner {
+            position: relative;
+            top: -56px;
+        }
+
+        /* logo */
+        .logo-img {
+            position: relative;
+            top: 60px;
+            left: 110px;
+        }
+    </style>
 </head>
 <body>
+<div class="nav">
+    <div class="mini-header">
+        <div class="mini-header-content">
+            <div class="nav-link">
+                <ul class="nav-link-ul">
+                    <li class="nav-link-item">
+                        <img
+                                class="nav-link-item-img"
+                                src="./images/bilibili-fill.png"
+                                alt=""
+                        />
+                        <a href="#">主站</a>
+                    </li>
+                    <li class="nav-link-item">
+                        <a href="#">番剧</a>
+                    </li>
+                    <li class="nav-link-item">
+                        <a href="#">游戏中心</a>
+                    </li>
+                    <li class="nav-link-item">
+                        <a href="#">直播</a>
+                    </li>
+                    <li class="nav-link-item">
+                        <a href="#">会员购</a>
+                    </li>
+                    <li class="nav-link-item">
+                        <a href="#">漫画</a>
+                    </li>
+                    <li class="nav-link-item">
+                        <a href="#">赛事</a>
+                    </li>
+                    <li class="nav-link-item">
+                        <a href="#">S10</a>
+                    </li>
+                    <li class="nav-link-item">
+                <span>
+                  <div>
+                    <img
+                            class="nav-link-item-img"
+                            src="./images/iphone.png"
+                            alt=""
+                    />
+                    下载APP
+                  </div>
+                </span>
+                    </li>
+                </ul>
+            </div>
+            <div class="nav-search-box">
+                <div class="nav-search">
+                    <form id="nav-searchform">
+                        <input
+                                class="search-input"
+                                type="text"
+                                placeholder="哈？海底捞出火锅奶茶了？"
+                        />
+                        <div class="nav-search-btn">
+                            <button>
+                                <img
+                                        class="nav-search-btn-img"
+                                        src="./images/search.png"
+                                        alt=""
+                                />
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="nav-user-center">
+                <div class="user-con">
+                    <div class="item">
+                <span>
+                  <img
+                          class="user-img"
+                          src="https://static.hdslb.com/images/akari.jpg"
+                          alt=""
+                  />
+                  <a class="user-login" href="#">登录</a>
+                </span>
+                    </div>
+                    <div class="item">
+                        <span><a class="user-login" href="#">注册</a></span>
+                    </div>
+                    <div>
+                        <span class="upload">投稿</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bili-banner">
+            <!-- <div class="layer">
+                <img
+                  src="https://i0.hdslb.com/bfs/archive/0b7eef054547750e6bfeff6f36c83e83d2a058fb.png"
+                  alt=""
+                  style="
+                    transform: translate(0px, 0px) rotate(0deg);
+                    height: 165px;
+                    width: 100%;
+                    background-size: cover;
+                  "
+                />
+              </div> -->
+
+            <div class="layer">
+                <div class="b-logo">
+                    <a href="https://www.bilibili.com/">
+                        <img
+                                class="logo-img"
+                                src="https://i0.hdslb.com/bfs/archive/622017dd4b0140432962d3ce0c6db99d77d2e937.png"
+                                alt=""
+                        />
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <h1>hello word!!!</h1>
 <p>this is a html page</p>
 <button onclick="jump_to_test()">test</button>

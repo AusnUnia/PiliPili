@@ -15,5 +15,5 @@ public interface VideoDao
     public Video getByAuthorId(@Param("authorId")String authorId);
     public int update(Video video);
     public List<Video> getRandomly();
-
+    public int updateCommentNumByBv(@Param("bv") String bv,@Param("num") int num);
 }

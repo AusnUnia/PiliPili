@@ -21,6 +21,12 @@ public class VideoServiceImpl implements VideoService
     }
 
     @Override
+    public boolean delete(Video video)
+    {
+        return videoDao.delete(video)>0;
+    }
+
+    @Override
     public Video getByBv(String bv)
     {
         return videoDao.getByBv(bv);

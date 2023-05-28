@@ -7,6 +7,7 @@ import java.util.List;
 public interface VideoService
 {
     public boolean save(Video video);
+    public boolean delete(Video video);
     public Video getByBv(String bv);
     public Video getByAuthorId(String authorId);
     public boolean update(Video video);

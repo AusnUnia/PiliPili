@@ -49,4 +49,9 @@
     <select id="getRandomly" resultType="Video">
         select * from videos order by rand() limit 50
     </select>
+
+    <update id="updateCommentNumByBv">
+        update videos set commentNum=commentNum+#{num} where bv=#{bv}
+    </update>
+
 </mapper>
