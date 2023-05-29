@@ -8,6 +8,7 @@ import com.ausn.pilipili.service.UserCommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,7 +22,7 @@ public class UserCommentServiceImpl implements UserCommentService
     @Autowired
     private VideoDao videoDao;
 
-    public boolean save(UserComment userComment)
+    public boolean publish(UserComment userComment)
     {
         userComment.setSendDate(Timestamp.valueOf(LocalDateTime.now()));
         userComment.setUpvoteNum(0);
@@ -33,7 +34,8 @@ public class UserCommentServiceImpl implements UserCommentService
     }
     public boolean delete(UserComment userComment)
     {
-        return userCommentDao.delete(userComment)>0&&videoDao.updateCommentNumByBv(userComment.getBv(),-1)>0;
+        return userCommentDao.delete(userComment)>0&&
+                videoDao.updateCommentNumByBv(userComment.getBv(),-1)>0;
     }
     public List<UserComment> getByBv(String bv)
     {

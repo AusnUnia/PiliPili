@@ -49,9 +49,36 @@
     <select id="getRandomly" resultType="Video">
         select * from videos order by rand() limit 50
     </select>
+    <update id="updateViewNumByBv">
+        update videos set viewNum=viewNum+#{num} where bv=#{bv}
+    </update>
+
+    <update id="updateBulletScreenNumByBv">
+        update videos set bulletScreenNum=bulletScreenNum+#{num} where bv=#{bv}
+    </update>
 
     <update id="updateCommentNumByBv">
         update videos set commentNum=commentNum+#{num} where bv=#{bv}
     </update>
 
+    <update id="updateUpvoteNumByBv">
+        update videos set upvoteNum=upvoteNum+#{num} where bv=#{bv}
+    </update>
+
+    <update id="updateDownvoteNumByBv">
+        update videos set downvoteNum=downvoteNum+#{num} where bv=#{bv}
+    </update>
+
+
+    <update id="updateCoinNumByBv">
+        update videos set coinNum=coinNum+#{num} where bv=#{bv}
+    </update>
+
+    <update id="updateSaveNumByBv">
+        update videos set saveNum=saveNum+#{num} where bv=#{bv}
+    </update>
+
+    <update id="updateShareNumByBv">
+        update videos set shareNum=shareNum+#{num} where bv=#{bv}
+    </update>
 </mapper>

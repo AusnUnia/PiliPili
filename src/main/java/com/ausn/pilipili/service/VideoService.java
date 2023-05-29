@@ -12,5 +12,6 @@ public interface VideoService
     public Video getByAuthorId(String authorId);
     public boolean update(Video video);
     public List<Video> getRandomly();
+    public boolean updateSingleAttribution(String bv,String operation,int opFlag);
 
 }
