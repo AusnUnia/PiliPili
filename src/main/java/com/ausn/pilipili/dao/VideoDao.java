@@ -14,7 +14,7 @@ public interface VideoDao
     public int save(Video video);
     public int delete(Video video);
     public Video getByBv(@Param("bv") String bv);
-    public Video getByAuthorId(@Param("authorId")String authorId);
+    public List<Video> getByAuthorId(@Param("authorId")String authorId);
     public int update(Video video);
     public List<Video> getRandomly();
     public int updateViewNumByBv(@Param("bv") String bv,@Param("num") int num);

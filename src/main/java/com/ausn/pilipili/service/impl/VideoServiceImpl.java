@@ -1,12 +1,17 @@
 package com.ausn.pilipili.service.impl;
 
+import com.ausn.pilipili.controller.Result;
+import com.ausn.pilipili.controller.ResultCode;
 import com.ausn.pilipili.dao.VideoDao;
+import com.ausn.pilipili.dao.VideoVoteDao;
 import com.ausn.pilipili.entity.Video;
+import com.ausn.pilipili.entity.VideoVote;
 import com.ausn.pilipili.service.VideoService;
+import com.ausn.pilipili.utils.UserHolder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigInteger;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,108 +20,181 @@ import java.util.List;
 public class VideoServiceImpl implements VideoService
 {
     @Autowired
-    VideoDao videoDao;
+    private VideoDao videoDao;
+    @Autowired
+    private VideoVoteDao videoVoteDao;
+
     @Override
-    public boolean save(Video video)
+    public Result save(Video video)
     {
         video.setUploadDate(Timestamp.valueOf(LocalDateTime.now()));
-        video.setSaveNum(BigInteger.ZERO);
-        video.setShareNum(BigInteger.ZERO);
-        video.setUpvoteNum(BigInteger.ZERO);
-        video.setDownvoteNum(BigInteger.ZERO);
-        video.setCoinNum(BigInteger.ZERO);
+        video.setSaveNum(0L);
+        video.setShareNum(0L);
+        video.setUpvoteNum(0L);
+        video.setDownvoteNum(0L);
+        video.setCoinNum(0L);
 
-        return videoDao.save(video)>0;
+        if(videoDao.save(video)>0)
+        {
+            return Result.ok(ResultCode.SAVE_OK);
+        }
+
+        return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
     }
 
     @Override
-    public boolean delete(Video video)
+    public Result delete(Video video)
     {
-        return videoDao.delete(video)>0;
+        if(videoDao.delete(video)>0)
+        {
+            return Result.ok(ResultCode.DELETE_OK);
+        }
+
+        return Result.fail(ResultCode.DELETE_ERR,"failed to delete video!");
     }
 
     @Override
-    public Video getByBv(String bv)
+    public Result getByBv(String bv)
     {
-        return videoDao.getByBv(bv);
+        Video video=videoDao.getByBv(bv);
+        return Result.ok(ResultCode.GET_OK,video);
     }
 
     @Override
-    public Video getByAuthorId(String authorId)
+    public Result getByAuthorId(String authorId)
     {
-        return videoDao.getByAuthorId(authorId);
+        List<Video> videos=videoDao.getByAuthorId(authorId);
+        return Result.ok(ResultCode.GET_OK,videos);
     }
 
     @Override
-    public boolean update(Video video)
+    public Result update(Video video)
     {
-        return videoDao.update(video)>0;
+        if(videoDao.update(video)>0)
+        {
+            return Result.ok(ResultCode.UPDATE_OK);
+        }
+
+        return Result.fail(ResultCode.UPDATE_ERR,"failed to update video!");
     }
 
     @Override
-    public List<Video> getRandomly()
+    public Result getRandomly()
     {
-        return videoDao.getRandomly();
+        List<Video> videos=videoDao.getRandomly();
+        return Result.ok(ResultCode.GET_OK,videos);
     }
 
-    public boolean updateSingleAttribution(String bv,String operation,int opFlag)
+    @Transactional
+    @Override
+    public Result upvote(String bv)
     {
-        int res=0;
-        if(operation.equals("upvote"))
+        //TODO 这里要针对用户加锁，不然同一个用户高并发点赞会出问题
+
+        //get current user's id
+        Long userId= UserHolder.getUser().getUid();
+
+        //query the information about the votes of a video
+        VideoVote videoVote=videoVoteDao.getByBvUserId(bv,userId);
+
+        //do upvote or cancel the upvote
+        ///if the user is upvoting or canceling the upvote, the downvote should always be false
+
+        if(videoVote.getDownvote())
         {
-            if(opFlag==1)
+            videoVote.setDownvote(false);
+
+            ///update the downvote number of the video at the same time
+            if(videoDao.updateDownvoteNumByBv(bv,-1)==0)
             {
-                res=videoDao.updateUpvoteNumByBv(bv,1);
-            }
-            else if(opFlag==-1)
-            {
-                res=videoDao.updateUpvoteNumByBv(bv,-1);
+                return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
             }
         }
-        else if(operation.equals("downvote"))
+
+        if(videoVote.getUpvote())
         {
-            if(opFlag==1)
+            ///if the user has upvoted, cancel the upvote
+            videoVote.setUpvote(false);
+
+            ///update the upvote number of the video at the same time
+            if(videoDao.updateUpvoteNumByBv(bv,-1)==0)
             {
-                res=videoDao.updateDownvoteNumByBv(bv,1);
-            }
-            else if(opFlag==-1)
-            {
-                res=videoDao.updateDownvoteNumByBv(bv,-1);
+                return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
             }
         }
-        else if(operation.equals("coin"))
+        else
         {
-            if(opFlag==1)
+            ///if the user has not upvoted, do upvote
+            videoVote.setUpvote(true);
+
+            ///update the upvote number of the video at the same time
+            if(videoDao.updateUpvoteNumByBv(bv,1)==0)
             {
-                res=videoDao.updateCoinNumByBv(bv,1);
-            }
-            else if(opFlag==-1)
-            {
-                res=videoDao.updateCoinNumByBv(bv,-1);
+                return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
             }
         }
-        else if(operation.equals("save"))
+
+        if(videoVoteDao.update(videoVote)==0)
         {
-            if(opFlag==1)
+            return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
+        }
+
+        return Result.ok(ResultCode.UPDATE_OK);
+    }
+
+    @Transactional
+    @Override
+    public Result downvote(String bv) {
+        //TODO 这里要针对用户加锁，不然同一个用户高并发点踩会出问题
+
+        //get current user's id
+        Long userId= UserHolder.getUser().getUid();
+
+        //query the information about the votes of a video
+        VideoVote videoVote=videoVoteDao.getByBvUserId(bv,userId);
+
+        //do downvote or cancel the downvote
+        ///if the user is downvote or canceling the upvote, the upvote should always be false
+
+        if(videoVote.getUpvote())
+        {
+            videoVote.setUpvote(false);
+
+            ///update the upvote number of the video at the same time
+            if(videoDao.updateUpvoteNumByBv(bv,-1)==0)
             {
-                res=videoDao.updateSaveNumByBv(bv,1);
-            }
-            else if(opFlag==-1)
-            {
-                res=videoDao.updateSaveNumByBv(bv,-1);
+                return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
             }
         }
-        else if(operation.equals("share"))
+
+        if(videoVote.getDownvote())
         {
-            if(opFlag==1)
+            ///if the user has downvoted, cancel the downvote
+            videoVote.setDownvote(false);
+
+            ///update the downvote number of the video at the same time
+            if(videoDao.updateDownvoteNumByBv(bv,-1)==0)
             {
-                res=videoDao.updateShareNumByBv(bv,1);
-            }
-            else if(opFlag==-1)
-            {
-                res=videoDao.updateShareNumByBv(bv,-1);
+                return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
             }
         }
-        return res>0;
+        else
+        {
+            ///if the user has not downvoted, do downvote
+            videoVote.setDownvote(true);
+
+            ///update the downvote number of the video at the same time
+            if(videoDao.updateDownvoteNumByBv(bv,1)==0)
+            {
+                return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
+            }
+        }
+
+        if(videoVoteDao.update(videoVote)==0)
+        {
+            return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
+        }
+
+        return Result.ok(ResultCode.UPDATE_OK);
     }
 }
