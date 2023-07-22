@@ -11,7 +11,7 @@
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-        <spring-boot.version>3.0.2</spring-boot.version>
+        <spring-boot.version>2.7.6</spring-boot.version>
     </properties>
     <dependencies>
         <dependency>
@@ -42,6 +42,21 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
         </dependency>
+
+        <!-- https://mvnrepository.com/artifact/cn.hutool/hutool-all -->
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>5.8.15</version>
+        </dependency>
+
+        <!-- https://mvnrepository.com/artifact/org.springframework.boot/spring-boot-starter-data-redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -75,14 +90,14 @@
                     <mainClass>com.ausn.PiliPiliApplication</mainClass>
                     <skip>true</skip>
                 </configuration>
-                <executions>
+<!--                <executions>
                     <execution>
                         <id>repackage</id>
                         <goals>
                             <goal>repackage</goal>
                         </goals>
                     </execution>
-                </executions>
+                </executions>-->
             </plugin>
         </plugins>
     </build>

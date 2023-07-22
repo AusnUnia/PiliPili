@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ausn.pilipili.dao.VideoCoinDao">
+    <insert id="save">
+        insert into video_coins values(#{bv},#{userId},#{coinNum},#{putDate});
+    </insert>
+
+    <delete id="delete">
+        delete from video_coins where bv=#{bv} and userId=#{userId} and putDate=#{putDate}
+    </delete>
+
+    <select id="getByBvUserIdPutDate" resultType="VideoCoin">
+        select * from video_coins where bv=#{bv} and userId=#{userId} and putDate=#{putDate}
+    </select>
+
+
+    <update id="update">
+        update video_coins
+        <set>
+            coinNum=#{coinNum}
+        </set>
+        <where>
+            bv=#{bv} and
+            userId=#{userId} and
+            putDate=#{putDate}
+        </where>
+    </update>
+
+</mapper>

@@ -7,7 +7,7 @@
     <insert id="save">
         insert into videos values(#{bv},#{title},#{authorId},#{viewNum},
         #{uploadDate},#{bulletScreenNum},#{commentNum},#{upvoteNum},#{downvoteNum},#{coinNum},
-        #{saveNum},#{shareNum},#{tags},#{videoPath},#{introduction})
+        #{saveNum},#{shareNum},#{tags},#{videoPath},#{description})
     </insert>
 
     <delete id="delete">
@@ -38,17 +38,18 @@
             shareNum=#{shareNum},
             tags=#{tags},
             videoPath=#{videoPath},
-            introduction=#{introduction}
+            description=#{description}
         </set>
         <where>
             bv=#{bv}
         </where>
     </update>
 
-    <!--算法复杂度太高，之后要改进 -->
+    <!--TODO 算法复杂度太高，之后要改进 -->
     <select id="getRandomly" resultType="Video">
         select * from videos order by rand() limit 50
     </select>
+
     <update id="updateViewNumByBv">
         update videos set viewNum=viewNum+#{num} where bv=#{bv}
     </update>

@@ -12,17 +12,23 @@ public class VideoController
     @Autowired
     private VideoService videoService;
 
-    //upload a video
+    /*
+    upload a video
+     */
     @PostMapping
-    public Result save(@RequestBody Video video)
+    public Result upload(@RequestBody Video video)
     {
-        return videoService.save(video);
+        return videoService.upload(video);
     }
 
-    //request for watching a video
+    /*
+    request for the information of a video
+     */
     @GetMapping("/BV{bv}")
     public Result getByBv(@PathVariable String bv)
     {
+        Video video= (Video) videoService.getByBv(bv).getData();
+        System.out.println(video);
         return videoService.getByBv(bv);
     }
 
@@ -42,5 +48,17 @@ public class VideoController
     public Result downvote(@PathVariable String bv)
     {
         return videoService.downvote(bv);
+    }
+
+    @PutMapping("/coin/BV{bv}/{num}")
+    public Result coin(@PathVariable String bv,@PathVariable int num)
+    {
+        return videoService.coin(bv,num);
+    }
+
+    @PostMapping("/favorite/BV{bv}")
+    public Result save(@PathVariable String bv)
+    {
+        return videoService.favorite();
     }
 }

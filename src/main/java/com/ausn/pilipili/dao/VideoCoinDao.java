@@ -1,0 +1,22 @@
+package com.ausn.pilipili.dao;
+
+import com.ausn.pilipili.entity.VideoCoin;
+import com.ausn.pilipili.entity.VideoVote;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Param;
+
+import java.sql.Date;
+
+/**
+ * @Author: 付显贵
+ * @DateTime: 2023/7/22 15:17
+ * @Description:
+ */
+@Mapper
+public interface VideoCoinDao
+{
+    public int save(VideoCoin videoVote);
+    public int delete(@Param("bv") String bv, @Param("userId")Long userId);
+    public VideoCoin getByBvUserIdPutDate(@Param("bv") String bv, @Param("userId")Long userId, @Param("putDate")Date putDate);
+    public int update(VideoCoin videoCoin);
+}

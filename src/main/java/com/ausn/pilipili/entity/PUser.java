@@ -4,6 +4,19 @@ import lombok.Data;
 
 import java.sql.Timestamp;
 
+/*
+create table pusers
+(
+    uid bigint primary key ,
+    phoneNumber varchar(11),
+    nickName varchar(32),
+    gender varchar(8),
+    birthday timestamp,
+    avatarPath varchar(256)
+)
+ */
+
+
 @Data
 public class PUser
 {

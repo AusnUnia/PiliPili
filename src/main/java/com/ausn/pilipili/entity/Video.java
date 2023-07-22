@@ -42,7 +42,7 @@ public class Video {
     private Long shareNum; //转发数量
     private String tags; //标签  形如 "标签1,标签2,标签3"
     private String videoPath; //视频存放位置  视频直接存本地，不存数据库
-    private String introduction; //视频简介
+    private String description; //视频简介
 
 };
 

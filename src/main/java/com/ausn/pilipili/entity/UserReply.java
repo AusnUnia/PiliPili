@@ -22,7 +22,7 @@ create table comments
 public class UserReply
 {
     private Long commentId; //所属评论编号
-    private String userId;  //发布的用户的id
+    private Long userId;  //发布的用户的id
     private String replyUserId; //所回复的那个用户的id
     private Timestamp sendDate; //回复发布日期
     private String content; //回复内容

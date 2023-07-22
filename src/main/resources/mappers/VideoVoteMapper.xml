@@ -23,7 +23,7 @@
             bv=#{bv},
             userId=#{userId},
             upvote=#{upvote},
-            downvote=#{downvote},
+            downvote=#{downvote}
         </set>
         <where>
             bv=#{bv} and

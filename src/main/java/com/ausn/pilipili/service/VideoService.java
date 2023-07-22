@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface VideoService
 {
-    public Result save(Video video);
+    public Result upload(Video video);
     public Result delete(Video video);
     public Result getByBv(String bv);
     public Result getByAuthorId(String authorId);
@@ -15,4 +15,6 @@ public interface VideoService
     public Result getRandomly();
     public Result upvote(String bv);
     public Result downvote(String bv);
+    public Result coin(String bv, int num);
+    public Result favorite();
 }
