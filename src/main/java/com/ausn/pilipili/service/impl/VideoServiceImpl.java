@@ -62,6 +62,15 @@ public class VideoServiceImpl implements VideoService
     @Override
     public Result getByBv(String bv)
     {
+        //use bloom filter to determine whether the data may exist in redis or mysql or not
+
+        /*
+        TODO 要抽象出一个查询函数，传入要查数据的key，回调函数（查数据库用），回调函数的参数，等。这个查询函数逻辑是这样的：
+        先用布隆过滤器查，没有就直接返回。可能有就去redis查，查到就返回，查不到就去数据库查。去数据库查时要加一个分布式锁，
+        然后查到了数据就把数据写入redis并返回，没查到就把空数据写入redis。
+         */
+
+
         Video video=videoDao.getByBv(bv);
         return Result.ok(ResultCode.GET_OK,video);
     }
@@ -270,6 +279,7 @@ public class VideoServiceImpl implements VideoService
     public Result favorite()
     {
         //TODO
+
         return null;
     }
 
