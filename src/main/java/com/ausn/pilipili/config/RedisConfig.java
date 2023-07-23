@@ -2,6 +2,7 @@ package com.ausn.pilipili.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RBloomFilter;
+import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,18 +16,18 @@ import org.springframework.context.annotation.Configuration;
 public class RedisConfig
 {
     @Bean
-    public Redisson redisson()
+    public RedissonClient redisson()
     {
         Config config = new Config();
         config.useSingleServer().setAddress("redis://192.168.107.128:6379").setDatabase(0);
-        return (Redisson) Redisson.create(config);
+        return Redisson.create(config);
     }
 
     //add bloom filter to avoid cache penetration
     @Bean
-    public RBloomFilter<String> bloomFilter(Redisson redisson)
+    public RBloomFilter<String> bloomFilter(RedissonClient redissonClient)
     {
-        RBloomFilter<String> bloomFilter = redisson.getBloomFilter("name_of_the_filter");
+        RBloomFilter<String> bloomFilter = redissonClient.getBloomFilter("name_of_the_filter");
         // 初始化布隆过滤器：预计元素为100000000L,期望的误差率为0.01
         bloomFilter.tryInit(100000000L, 0.01);
         return bloomFilter;
