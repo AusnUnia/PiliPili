@@ -10,6 +10,7 @@ import com.ausn.pilipili.dao.VideoVoteDao;
 import com.ausn.pilipili.entity.Video;
 import com.ausn.pilipili.entity.VideoCoin;
 import com.ausn.pilipili.entity.VideoVote;
+import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
 import com.ausn.pilipili.service.VideoService;
 import com.ausn.pilipili.utils.UserHolder;
 import com.ausn.pilipili.utils.constants.RedisConstants;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.sql.Date;
 import java.sql.Timestamp;
@@ -52,8 +54,11 @@ public class VideoServiceImpl implements VideoService
     private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(8);
 
     @Override
-    public Result upload(Video video)
+    public Result upload(MultipartHttpServletRequest request)
     {
+        return Result.ok(ResultCode.SAVE_OK);
+/*        Video video=new Video();
+
         video.setUploadDate(Timestamp.valueOf(LocalDateTime.now()));
         video.setSaveNum(0L);
         video.setShareNum(0L);
@@ -66,7 +71,7 @@ public class VideoServiceImpl implements VideoService
             return Result.ok(ResultCode.SAVE_OK);
         }
 
-        return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
+        return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");*/
     }
 
     @Override
@@ -92,8 +97,9 @@ public class VideoServiceImpl implements VideoService
 
         //use bloom filter to determine whether the data may exist in redis or mysql or not
         String key= RedisConstants.VIDEO_CACHE_KEY_PREFIX+bv;
-        if(!rBloomFilter.contains("key"))
+        if(!rBloomFilter.contains(key))
         {
+            System.out.println("bloom filter rejected!");
             return Result.fail(ResultCode.GET_ERR,"no such video!");
         }
 
@@ -333,7 +339,7 @@ public class VideoServiceImpl implements VideoService
     }
 
     @Override
-    public Result favorite()
+    public Result favorite(String bv)
     {
         //TODO
 

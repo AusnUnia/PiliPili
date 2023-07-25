@@ -29,7 +29,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor
         String token=request.getHeader("Authorization");
         if(StrUtil.isBlank(token))
         {
-            System.out.println("blank token!");
+            System.out.println("blank token! "+request.getRequestURI());
             return true;
         }
 
@@ -57,6 +57,7 @@ public class RefreshTokenInterceptor implements HandlerInterceptor
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception
     {
         //the afterCompletion method will always execute if the preHandler return true.
+        System.out.println("removeUser()");
         UserHolder.removeUser();
     }
 }

@@ -29,7 +29,8 @@ public class MvcConfig implements WebMvcConfigurer
                         "/js/**",
                         "/video/**",
                         "/error",
-                        "/css/**"
+                        "/css/**",
+                        "/videos/upload"
                 );
     }
 }

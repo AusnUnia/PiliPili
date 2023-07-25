@@ -4,6 +4,7 @@ import com.ausn.pilipili.entity.Video;
 import com.ausn.pilipili.service.VideoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 @RestController
 @RequestMapping("/videos")
@@ -15,10 +16,13 @@ public class VideoController
     /*
     upload a video
      */
-    @PostMapping
-    public Result upload(@RequestBody Video video)
+    @PostMapping("/upload")
+    public Result upload(MultipartHttpServletRequest request)
     {
-        return videoService.upload(video);
+        //TODO 要完善上传功能。前后端都要搞
+        System.out.println(request.getParameterMap());
+        System.out.println(request.getFile("video"));
+        return videoService.upload(request);
     }
 
     /*
@@ -59,6 +63,6 @@ public class VideoController
     @PostMapping("/favorite/BV{bv}")
     public Result save(@PathVariable String bv)
     {
-        return videoService.favorite();
+        return videoService.favorite(bv);
     }
 }

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+
+    <title>上传</title>
+
+    <meta content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" name="viewport">
+
+    <script src="../js/vue.js"></script>
+    <script src="../js/axios.js"></script>
+    <script src="../js/common.js"></script>
+</head>
+
+
+<div id="app" xmlns="http://www.w3.org/1999/html">
+    <input type="file" @change="onFileChange">
+
+    <video v-if="videoUrl" :src="videoUrl" controls></video>
+    <br>
+    标题：<input placeholder="请输入标题" v-model="videoUploadRequest.title" ></input>
+    tag：<input type="text" v-model="videoUploadRequest.tags"></input>
+    简介：<input placeholder="请输入简介" v-model="videoUploadRequest.title" ></input>
+    <br>
+    <button @click="onUpload">上传</button>
+</div>
+
+
+<script>
+    new Vue({
+        el:"#app",
+        data:
+        {
+            videoFile: null,
+            videoUrl: null,
+            videoUploadRequest:{}
+        },
+        methods:
+        {
+            onUpload()
+            {
+                let formData = new FormData();
+                formData.append('video', this.videoFile);
+                formData.append("videoUploadRequest",this.videoUploadRequest);
+
+                axios.post('/videos/upload', formData)
+                    .then(res => {
+                        console.log('Uploaded');
+                    })
+                    .catch(err => {
+                        console.error(err);
+                    })
+            }
+        }
+    })
+</script>

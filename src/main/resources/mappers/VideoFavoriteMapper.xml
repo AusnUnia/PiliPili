@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ausn.pilipili.dao.VideoFavoriteDao">
+    <insert id="save">
+        insert into video_favorites values(#{bv},#{userId},#{favoriteTime});
+    </insert>
+
+    <delete id="delete">
+        delete from video_favorites where bv=#{bv} and userId=#{userId}
+    </delete>
+
+    <select id="getByBvUserIdPutDate" resultType="VideoCoin">
+        select * from video_favorites where bv=#{bv} and userId=#{userId}
+    </select>
+
+
+    <update id="update">
+        update video_favorites
+        <set>
+            favoriteTime=#{favoriteTime}
+        </set>
+        <where>
+            bv=#{bv} and
+            userId=#{userId}
+        </where>
+    </update>
+
+</mapper>

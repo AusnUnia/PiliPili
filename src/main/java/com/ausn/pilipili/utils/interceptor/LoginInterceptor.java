@@ -15,7 +15,7 @@ public class LoginInterceptor implements HandlerInterceptor
         System.out.println("login interceptor:"+request.getRequestURI());
         if(UserHolder.getUser()==null)
         {
-            System.out.println("login interceptor:用户不存在！");
+            System.out.println("login interceptor:用户不存在！"+request.getRequestURI());
             response.setStatus(401);
             return false;
         }
