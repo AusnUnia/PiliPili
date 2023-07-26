@@ -1,9 +1,14 @@
 package com.ausn.pilipili.controller;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.json.JSONUtil;
 import com.ausn.pilipili.entity.Video;
+import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
 import com.ausn.pilipili.service.VideoService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 @RestController
@@ -19,10 +24,12 @@ public class VideoController
     @PostMapping("/upload")
     public Result upload(MultipartHttpServletRequest request)
     {
-        //TODO 要完善上传功能。前后端都要搞
-        System.out.println(request.getParameterMap());
-        System.out.println(request.getFile("video"));
-        return videoService.upload(request);
+        System.out.println(request.getFile("video").getSize());
+        System.out.println(request.getParameter("videoUploadRequest"));
+        VideoUploadRequest videoUploadRequest = BeanUtil.toBean(request.getParameter("videoUploadRequest"), VideoUploadRequest.class);
+        System.out.println(videoUploadRequest); //TODO 无法正确序列化
+        return null;
+        /*return videoService.upload(request);*/
     }
 
     /*

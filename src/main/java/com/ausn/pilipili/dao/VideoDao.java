@@ -5,13 +5,14 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.math.BigInteger;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 
 @Mapper
 public interface VideoDao
 {
-    public int save(Video video);
+    public int save(Video video) throws SQLException;
     public int delete(Video video);
     public Video getByBv(@Param("bv") String bv);
     public List<Video> getByAuthorId(@Param("authorId")String authorId);

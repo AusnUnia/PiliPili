@@ -20,9 +20,9 @@
 
     <video v-if="videoUrl" :src="videoUrl" controls></video>
     <br>
-    标题：<input placeholder="请输入标题" v-model="videoUploadRequest.title" ></input>
+    标题：<input type="text" placeholder="请输入标题" v-model="videoUploadRequest.title" ></input>
     tag：<input type="text" v-model="videoUploadRequest.tags"></input>
-    简介：<input placeholder="请输入简介" v-model="videoUploadRequest.title" ></input>
+    简介：<input type="text" placeholder="请输入简介" v-model="videoUploadRequest.description" ></input>
     <br>
     <button @click="onUpload">上传</button>
 </div>
@@ -39,15 +39,24 @@
         },
         methods:
         {
+            onFileChange(e) {
+                this.videoFile = e.target.files[0];
+            },
+
             onUpload()
             {
                 let formData = new FormData();
+                let uploadProgress;
                 formData.append('video', this.videoFile);
-                formData.append("videoUploadRequest",this.videoUploadRequest);
+                formData.append('videoUploadRequest', JSON.stringify(this.videoUploadRequest));
 
-                axios.post('/videos/upload', formData)
+                axios.post('/videos/upload', formData,{
+                        headers: {
+                            'Content-Type': 'multipart/form-data'
+                        },
+                    })
                     .then(res => {
-                        console.log('Uploaded');
+                        console.log('Uploaded', uploadProgress);
                     })
                     .catch(err => {
                         console.error(err);

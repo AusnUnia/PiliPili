@@ -67,6 +67,14 @@
             <artifactId>spring-kafka</artifactId>
         </dependency>
 
+        <!-- https://mvnrepository.com/artifact/com.google.guava/guava -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>32.0.1-jre</version>
+        </dependency>
+
+
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -100,14 +108,14 @@
                     <mainClass>com.ausn.PiliPiliApplication</mainClass>
                     <skip>true</skip>
                 </configuration>
-<!--                <executions>
-                    <execution>
-                        <id>repackage</id>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>-->
+                <!--                <executions>
+                                    <execution>
+                                        <id>repackage</id>
+                                        <goals>
+                                            <goal>repackage</goal>
+                                        </goals>
+                                    </execution>
+                                </executions>-->
             </plugin>
         </plugins>
     </build>

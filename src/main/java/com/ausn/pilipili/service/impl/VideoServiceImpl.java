@@ -1,5 +1,6 @@
 package com.ausn.pilipili.service.impl;
 
+import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.ausn.pilipili.controller.Result;
@@ -12,6 +13,7 @@ import com.ausn.pilipili.entity.VideoCoin;
 import com.ausn.pilipili.entity.VideoVote;
 import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
 import com.ausn.pilipili.service.VideoService;
+import com.ausn.pilipili.utils.BvGenerator;
 import com.ausn.pilipili.utils.UserHolder;
 import com.ausn.pilipili.utils.constants.RedisConstants;
 import org.redisson.api.RBloomFilter;
@@ -22,9 +24,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.util.IdGenerator;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.Date;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -51,14 +59,28 @@ public class VideoServiceImpl implements VideoService
     @Autowired
     private RedissonClient redissonClient;
 
+    @Autowired
+    private BvGenerator bvGenerator;
+
     private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(8);
 
     @Override
+    @Transactional
     public Result upload(MultipartHttpServletRequest request)
     {
-        return Result.ok(ResultCode.SAVE_OK);
-/*        Video video=new Video();
+        MultipartFile videoFile = request.getFile("video");
+        if(videoFile==null||videoFile.isEmpty())
+        {
+            return Result.fail("the video file is empty!");
+        }
 
+        //generate the bv for the video.
+        String bv= bvGenerator.generateBv();
+
+        //create the entity of the video which will be stored in mysql
+        Video video=new Video();
+
+        video.setBv(bv);
         video.setUploadDate(Timestamp.valueOf(LocalDateTime.now()));
         video.setSaveNum(0L);
         video.setShareNum(0L);
@@ -66,12 +88,50 @@ public class VideoServiceImpl implements VideoService
         video.setDownvoteNum(0L);
         video.setCoinNum(0L);
 
-        if(videoDao.save(video)>0)
+        video.setTitle("shit");
+
+        //save the video information in mysql. the bv may duplicate , so when first duplicate occur, generate another bv.
+        try
         {
-            return Result.ok(ResultCode.SAVE_OK);
+            videoDao.save(video);
+        }
+        catch (SQLException e)
+        {
+            if(e.getErrorCode()==1062) //the primary key is duplicated, try to generate a new bv
+            {
+                bv=bvGenerator.generateBv();
+                video.setBv(bv);
+                try
+                {
+                    videoDao.save(video);
+                }
+                catch (SQLException ex)
+                {
+                    if(ex.getErrorCode()==1062)
+                    {
+                        return Result.fail(ResultCode.SAVE_ERR,"failed to save video! bv duplicated!");
+                    }
+                    return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
+                }
+            }
+            else
+            {
+                return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
+            }
         }
 
-        return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");*/
+        //save the video file
+        String videoFilePath="static/video/BV"+bv;
+        try
+        {
+            videoFile.transferTo(new File(videoFilePath));
+        }
+        catch (IOException e)
+        {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly(); //failed to save the video file, rollback this service
+        }
+
+        return Result.ok(ResultCode.SAVE_OK);
     }
 
     @Override
