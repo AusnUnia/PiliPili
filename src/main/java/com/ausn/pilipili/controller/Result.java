@@ -21,10 +21,6 @@ public class Result
     {
         return new Result(ResultCode.DEFAULT_OK,null,null);
     }
-    static public Result ok(Object data)
-    {
-        return new Result(ResultCode.DEFAULT_OK,null,data);
-    }
     static public Result ok(int code)
     {
         return new Result(code,null,null);

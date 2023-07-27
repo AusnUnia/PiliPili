@@ -98,7 +98,7 @@ public class PUserServiceImpl implements PUserService
         stringRedisTemplate.expire(RedisConstants.LOGIN_PUSER_KEY_PREFIX+token,RedisConstants.LOGIN_PUSER_TTL,TimeUnit.MINUTES);
 
         //return the token to the front end
-        return Result.ok(token);
+        return Result.ok(ResultCode.DEFAULT_OK,token);
     }
 
 

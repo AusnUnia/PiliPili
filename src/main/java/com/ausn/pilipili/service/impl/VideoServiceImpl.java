@@ -11,6 +11,7 @@ import com.ausn.pilipili.dao.VideoVoteDao;
 import com.ausn.pilipili.entity.Video;
 import com.ausn.pilipili.entity.VideoCoin;
 import com.ausn.pilipili.entity.VideoVote;
+import com.ausn.pilipili.entity.converter.VideoConverter;
 import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
 import com.ausn.pilipili.service.VideoService;
 import com.ausn.pilipili.utils.BvGenerator;
@@ -21,6 +22,8 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.RedisClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +32,7 @@ import org.springframework.util.IdGenerator;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
+import javax.servlet.ServletContext;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Date;
@@ -50,6 +54,8 @@ public class VideoServiceImpl implements VideoService
     private VideoVoteDao videoVoteDao;
     @Autowired
     private VideoCoinDao videoCoinDao;
+    @Autowired
+    private ResourceLoader resourceLoader;
 
 
     @Autowired
@@ -68,27 +74,42 @@ public class VideoServiceImpl implements VideoService
     @Transactional
     public Result upload(MultipartHttpServletRequest request)
     {
+        //parse the video file
         MultipartFile videoFile = request.getFile("video");
         if(videoFile==null||videoFile.isEmpty())
         {
             return Result.fail("the video file is empty!");
         }
 
+        //parse the VideoUploadRequest which contains the title, description and tags of the uploading video
+        String jsonStr = request.getParameter("videoUploadRequest");
+        VideoUploadRequest videoUploadRequest=JSONUtil.toBean(jsonStr,VideoUploadRequest.class);
+
         //generate the bv for the video.
         String bv= bvGenerator.generateBv();
 
+        //create the path for video file
+        //TODO 保存路径有问题
+        String resourcesPath="C:\\Users\\16377\\Desktop\\Java\\PiliPili\\src\\main\\resources\\static\\video";
+
+        String relativePath="\\static\\video\\BV"+bv+".mp4";
+
         //create the entity of the video which will be stored in mysql
-        Video video=new Video();
+        Video video= VideoConverter.toVideo(videoUploadRequest);
 
         video.setBv(bv);
+        video.setAuthorId("1234");
+        video.setViewNum(0L);
         video.setUploadDate(Timestamp.valueOf(LocalDateTime.now()));
+        video.setBulletScreenNum(0L);
+        video.setCommentNum(0L);
         video.setSaveNum(0L);
         video.setShareNum(0L);
         video.setUpvoteNum(0L);
         video.setDownvoteNum(0L);
         video.setCoinNum(0L);
+        video.setVideoPath(relativePath);
 
-        video.setTitle("shit");
 
         //save the video information in mysql. the bv may duplicate , so when first duplicate occur, generate another bv.
         try
@@ -121,7 +142,8 @@ public class VideoServiceImpl implements VideoService
         }
 
         //save the video file
-        String videoFilePath="static/video/BV"+bv;
+        String videoFilePath=resourcesPath+relativePath;
+        System.out.println(videoFilePath);
         try
         {
             videoFile.transferTo(new File(videoFilePath));
@@ -157,11 +179,11 @@ public class VideoServiceImpl implements VideoService
 
         //use bloom filter to determine whether the data may exist in redis or mysql or not
         String key= RedisConstants.VIDEO_CACHE_KEY_PREFIX+bv;
-        if(!rBloomFilter.contains(key))
+/*        if(!rBloomFilter.contains(key))
         {
             System.out.println("bloom filter rejected!");
             return Result.fail(ResultCode.GET_ERR,"no such video!");
-        }
+        }*/
 
         //the request passed the bloom filter, then query it in redis
         String videoJson = stringRedisTemplate.opsForValue().get(key);
