@@ -23,13 +23,8 @@ public class MvcConfig implements WebMvcConfigurer
                 .excludePathPatterns(
                         "/user/code",      // ask for verification code
                         "/user/login",     //use login
-                        "/index.html","/", //home page
-                        "/pages/**",
-                        "/images/**",
-                        "/js/**",
                         "/video/**",
                         "/error",
-                        "/css/**",
                         "/videos/upload",
                         "/static/**"
                 );

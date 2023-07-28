@@ -1,9 +1,7 @@
 package com.ausn.pilipili.service;
 
 import com.ausn.pilipili.controller.Result;
-import com.ausn.pilipili.dto.LoginFormDTO;
-
-import javax.servlet.http.HttpSession;
+import com.ausn.pilipili.entity.dto.LoginFormDTO;
 
 public interface PUserService
 {

@@ -1,4 +1,4 @@
-package com.ausn.pilipili.dto;
+package com.ausn.pilipili.entity.dto;
 
 import lombok.Data;
 

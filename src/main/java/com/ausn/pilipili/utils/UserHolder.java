@@ -1,6 +1,6 @@
 package com.ausn.pilipili.utils;
 
-import com.ausn.pilipili.dto.PUserDTO;
+import com.ausn.pilipili.entity.dto.PUserDTO;
 
 public class UserHolder
 {

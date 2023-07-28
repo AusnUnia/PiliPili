@@ -7,8 +7,8 @@ import cn.hutool.core.util.RandomUtil;
 import com.ausn.pilipili.controller.Result;
 import com.ausn.pilipili.controller.ResultCode;
 import com.ausn.pilipili.dao.PUserDao;
-import com.ausn.pilipili.dto.LoginFormDTO;
-import com.ausn.pilipili.dto.PUserDTO;
+import com.ausn.pilipili.entity.dto.LoginFormDTO;
+import com.ausn.pilipili.entity.dto.PUserDTO;
 import com.ausn.pilipili.entity.PUser;
 import com.ausn.pilipili.service.PUserService;
 import com.ausn.pilipili.utils.constants.LocalConstants;
@@ -18,7 +18,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -35,15 +37,18 @@ public class PUserServiceImpl implements PUserService
     @Autowired
     private PUserDao pUserDao;
 
-    private PUser createUserWithPhoneNumber(String phoneNumber)
+    @Transactional
+    public PUser createUserWithPhoneNumber(String phoneNumber)
     {
         PUser pUser=new PUser();
         pUser.setPhoneNumber(phoneNumber);
         pUser.setNickName(LocalConstants.PUSER_NICK_NAME_PREFIX+RandomUtil.randomNumbers(11));
         pUser.setAvatarPath("./images/avatars/default.jpg");
         pUser.setGender("unknown");
-        pUser.setBirthday(Timestamp.valueOf(LocalDateTime.now()));
+        pUser.setBirthday(Date.valueOf(LocalDate.now()));
         pUserDao.save(pUser);
+        pUser.setUid(pUserDao.getLastInsertedId());
+
         return pUser;
     }
 
@@ -92,6 +97,7 @@ public class PUserServiceImpl implements PUserService
                         .setIgnoreNullValue(true)
                         .setFieldValueEditor((field,val)->val.toString())
         );                                                                 //convert the bean of user's insensitive information into map which can be accepted by the Redis
+        //System.out.println("in PUSerServ: pUserMap:"+pUserMap);
         stringRedisTemplate.opsForHash().putAll(RedisConstants.LOGIN_PUSER_KEY_PREFIX+token,pUserMap);
 
         //set the login period of validity

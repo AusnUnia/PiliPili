@@ -14,4 +14,5 @@ public interface PUserDao
     public PUser getByUid(@Param("uid") Long uid);
     public PUser getByPhoneNumber(@Param("phoneNumber") String phoneNumber);
     public int update(PUser pUser);
+    public Long getLastInsertedId();
 }

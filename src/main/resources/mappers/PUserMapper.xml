@@ -36,4 +36,8 @@
         </where>
     </update>
 
+    <select id="getLastInsertedId" resultType="long">
+        SELECT LAST_INSERT_ID();
+    </select>
+
 </mapper>

@@ -31,6 +31,7 @@ public class VideoController
     /*
     request for the information of a video
      */
+    //TODO 前端服务器的视频位置还要调试
     @GetMapping("/BV{bv}")
     public Result getByBv(@PathVariable String bv)
     {

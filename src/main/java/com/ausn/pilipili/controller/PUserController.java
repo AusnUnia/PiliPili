@@ -1,11 +1,9 @@
 package com.ausn.pilipili.controller;
 
-import com.ausn.pilipili.dto.LoginFormDTO;
+import com.ausn.pilipili.entity.dto.LoginFormDTO;
 import com.ausn.pilipili.service.PUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-
-import javax.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/user")
