@@ -27,7 +27,7 @@ public class RedisConfig
     @Bean
     public RBloomFilter<String> bloomFilter(RedissonClient redissonClient)
     {
-        RBloomFilter<String> bloomFilter = redissonClient.getBloomFilter("name_of_the_filter");
+        RBloomFilter<String> bloomFilter = redissonClient.getBloomFilter("bloom_filter");
         // 初始化布隆过滤器：预计元素为100000000L,期望的误差率为0.01
         bloomFilter.tryInit(100000000L, 0.01);
         return bloomFilter;

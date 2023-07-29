@@ -22,7 +22,9 @@ public interface VideoDao
     public int updateBulletScreenNumByBv(@Param("bv") String bv,@Param("num") int num);
     public int updateCommentNumByBv(@Param("bv") String bv,@Param("num") int num);
     public int updateUpvoteNumByBv(@Param("bv") String bv,@Param("num") int num);
+    public int setUpvoteNumByBv(@Param("bv") String bv,@Param("upvoteNum") int upvoteNum);
     public int updateDownvoteNumByBv(@Param("bv") String bv,@Param("num") int num);
+    public int setDownvoteNumByBv(@Param("bv") String bv,@Param("downvoteNum") int downvoteNum);
     public int updateCoinNumByBv(@Param("bv") String bv,@Param("num") int num);
     public int updateSaveNumByBv(@Param("bv") String bv,@Param("num") int num);
     public int updateShareNumByBv(@Param("bv") String bv,@Param("num") int num);

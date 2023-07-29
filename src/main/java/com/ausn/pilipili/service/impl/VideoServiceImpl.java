@@ -1,5 +1,7 @@
 package com.ausn.pilipili.service.impl;
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -22,9 +24,11 @@ import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.redisson.client.RedisClient;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
@@ -40,10 +44,13 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class VideoServiceImpl implements VideoService
@@ -54,8 +61,6 @@ public class VideoServiceImpl implements VideoService
     private VideoVoteDao videoVoteDao;
     @Autowired
     private VideoCoinDao videoCoinDao;
-    @Autowired
-    private ResourceLoader resourceLoader;
 
 
     @Autowired
@@ -64,9 +69,20 @@ public class VideoServiceImpl implements VideoService
     private StringRedisTemplate stringRedisTemplate;
     @Autowired
     private RedissonClient redissonClient;
+    private static final DefaultRedisScript<Long> UPVOTE_SCRIPT;
+
+    static {
+        UPVOTE_SCRIPT = new DefaultRedisScript<>();
+        UPVOTE_SCRIPT.setLocation(new ClassPathResource("./lua/upvote.lua"));
+        UPVOTE_SCRIPT.setResultType(Long.class);
+    }
+
+
 
     @Autowired
     private BvGenerator bvGenerator;
+
+
 
     private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(8);
 
@@ -89,16 +105,15 @@ public class VideoServiceImpl implements VideoService
         String bv= bvGenerator.generateBv();
 
         //create the path for video file
-        //TODO 保存路径有问题
-        String resourcesPath="C:\\Users\\16377\\Desktop\\Java\\PiliPili\\src\\main\\resources\\static\\video";
+        String resourcesPath="C:\\Users\\16377\\Desktop\\Java\\nginx-1.24.0\\html\\pilipili\\video_src\\";
 
-        String relativePath="\\static\\video\\BV"+bv+".mp4";
+        String relativePath="..\\video_src\\BV"+bv+".mp4"; //the front end server can find the source of the video through this path
 
         //create the entity of the video which will be stored in mysql
         Video video= VideoConverter.toVideo(videoUploadRequest);
 
         video.setBv(bv);
-        video.setAuthorId("1234");
+        video.setAuthorId(UserHolder.getUser().getUid());
         video.setViewNum(0L);
         video.setUploadDate(Timestamp.valueOf(LocalDateTime.now()));
         video.setBulletScreenNum(0L);
@@ -175,6 +190,7 @@ public class VideoServiceImpl implements VideoService
         先用布隆过滤器查，没有就直接返回。可能有就去redis查，查到就返回，查不到就去数据库查。去数据库查时要加一个分布式锁，
         然后查到了数据就把数据写入redis并返回，没查到就把空数据写入redis。
          */
+
         Video video=null;
 
         //use bloom filter to determine whether the data may exist in redis or mysql or not
@@ -227,11 +243,17 @@ public class VideoServiceImpl implements VideoService
         return Result.ok(ResultCode.GET_OK,videos);
     }
 
-    @Override
-    public Result update(Video video)
+    /**
+     * update the information of the video in mysql, meanwhile delete the cached video in redis
+     * @param video
+     * @return
+     */
+
+    public Result updateInMysql(Video video)
     {
         if(videoDao.update(video)>0)
         {
+            stringRedisTemplate.delete(RedisConstants.VIDEO_CACHE_KEY_PREFIX+video.getBv());
             return Result.ok(ResultCode.UPDATE_OK);
         }
 
@@ -245,75 +267,54 @@ public class VideoServiceImpl implements VideoService
         return Result.ok(ResultCode.GET_OK,videos);
     }
 
-    @Transactional
     @Override
     public Result upvote(String bv)
     {
-        //TODO 这里要针对用户加锁，不然同一个用户高并发点赞会出问题
+        /**
+         * upvote operation only update the upvote number in redis, and the data in redis will
+         * be written into mysql by scheduled task
+         */
 
         //get current user's id
-        Long userId= UserHolder.getUser().getUid();
+        Long userId=UserHolder.getUser().getUid();
 
-        //query the information about the votes of a video
-        VideoVote videoVote=videoVoteDao.getByBvUserId(bv,userId);
-        if(videoVote==null)
+        //get the keys of sets in redis that contains users who upvoted or downvoted or canceled to the video
+        String upvoteKey=RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX + bv;
+        String novoteKey=RedisConstants.VIDEO_NOVOTE_CACHE_KEY_PREFIX + bv;
+        String downvoteKey=RedisConstants.VIDEO_DOWNVOTE_CACHE_KEY_PREFIX + bv;
+
+        /**
+         * if the upvote data may be not in redis, don't need to reconstruct it. upvote usually
+         * go along with getUpVoteNum , getUpVoteNum will reconstruct it.
+         */
+
+
+        //when the user is upvoting or canceling the upvote, the downvote should always be false
+        stringRedisTemplate.opsForSet().remove(downvoteKey,userId.toString());
+
+        //if the user has upvoted, cancel the upvote
+        if(stringRedisTemplate.opsForSet().isMember(upvoteKey,userId.toString()))
         {
-            videoVote=createVideoVote(bv,userId);
-            if(videoVote==null)
-            {
-                return Result.fail(ResultCode.SAVE_ERR,"failed to upvote!");
-            }
+            stringRedisTemplate.opsForSet().remove(upvoteKey,userId.toString());
+            stringRedisTemplate.opsForSet().add(novoteKey,userId.toString());
         }
-
-        //do upvote or cancel the upvote
-        ///if the user is upvoting or canceling the upvote, the downvote should always be false
-
-        if(videoVote.getDownvote())
-        {
-            videoVote.setDownvote(false);
-
-            ///update the downvote number of the video at the same time
-            if(videoDao.updateDownvoteNumByBv(bv,-1)==0)
-            {
-                return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
-            }
-        }
-
-        if(videoVote.getUpvote())
-        {
-            ///if the user has upvoted, cancel the upvote
-            videoVote.setUpvote(false);
-
-            ///update the upvote number of the video at the same time
-            if(videoDao.updateUpvoteNumByBv(bv,-1)==0)
-            {
-                return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
-            }
-        }
+        //if the user has not upvoted, do upvote
         else
         {
-            ///if the user has not upvoted, do upvote
-            videoVote.setUpvote(true);
-
-            ///update the upvote number of the video at the same time
-            if(videoDao.updateUpvoteNumByBv(bv,1)==0)
-            {
-                return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
-            }
+            stringRedisTemplate.opsForSet().add(upvoteKey,userId.toString());
+            stringRedisTemplate.opsForSet().remove(novoteKey,userId.toString());
         }
 
-        if(videoVoteDao.update(videoVote)==0)
-        {
-            return Result.fail(ResultCode.UPDATE_ERR,"failed to upvote!");
-        }
+        //return the refreshed upvote number
+        Long upvoteNum=stringRedisTemplate.opsForSet().size(upvoteKey);
 
-        return Result.ok(ResultCode.UPDATE_OK);
+        return Result.ok(ResultCode.UPDATE_OK,upvoteNum);
     }
 
     @Transactional
     @Override
     public Result downvote(String bv) {
-        //TODO 这里要针对用户加锁，不然同一个用户高并发点踩会出问题
+/*
 
         //get current user's id
         Long userId= UserHolder.getUser().getUid();
@@ -369,7 +370,7 @@ public class VideoServiceImpl implements VideoService
         if(videoVoteDao.update(videoVote)==0)
         {
             return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
-        }
+        }*/
 
         return Result.ok(ResultCode.UPDATE_OK);
     }
@@ -428,6 +429,78 @@ public class VideoServiceImpl implements VideoService
         return null;
     }
 
+    @Override
+    public Result getUpvoteNumByBv(String bv)
+    {
+        //get the key
+        String key=RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX + bv;
+
+        //see if in redis first
+        Boolean isExist = stringRedisTemplate.hasKey(key);
+
+        //if not in redis , reconstruct is
+        if(isExist==null||!isExist)
+        {
+            RLock lock = redissonClient.getLock(RedisConstants.VIDEO_VOTE_LOCK_KEY_PREFIX + bv);
+            boolean isLocked=lock.tryLock();
+            if(isLocked)
+            {
+                try
+                {
+                    loadVoteIntoRedis(bv);
+                }
+                finally
+                {
+                    lock.unlock();
+                }
+            }
+        }
+
+        Long upvoteNum = stringRedisTemplate.opsForSet().size(key);
+
+        return Result.ok(ResultCode.GET_OK,upvoteNum);
+    }
+
+
+    private void loadVoteIntoRedis(String bv)
+    {
+        //get the keys of sets in redis that contains users who upvoted or downvoted or canceled to the video
+        String upvoteKey=RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX + bv;
+        String novoteKey=RedisConstants.VIDEO_NOVOTE_CACHE_KEY_PREFIX + bv;
+        String downvoteKey=RedisConstants.VIDEO_DOWNVOTE_CACHE_KEY_PREFIX + bv;
+
+        //query all the vote information about the video from mysql
+        List<VideoVote> videoVoteList = videoVoteDao.getByBv(bv);
+
+        //add these votes into redis
+        Map<Integer, List<VideoVote>> groupedMap = videoVoteList.stream()
+                .collect(Collectors.groupingBy(VideoVote::getVote));
+
+        if(groupedMap.get(1)!=null)
+        {
+            String[] upvoteUserIds = groupedMap.get(1).stream()
+                    .map(videoVote -> String.valueOf(videoVote.getUserId()))
+                    .toArray(String[]::new);
+            stringRedisTemplate.opsForSet().add(upvoteKey,upvoteUserIds);
+        }
+
+        if(groupedMap.get(0)!=null)
+        {
+            String[] novoteUserIds = groupedMap.get(0).stream()
+                    .map(videoVote -> String.valueOf(videoVote.getUserId()))
+                    .toArray(String[]::new);
+            stringRedisTemplate.opsForSet().add(novoteKey,novoteUserIds);
+        }
+
+        if(groupedMap.get(-1)!=null)
+        {
+            String[] downvoteUserIds = groupedMap.get(-1).stream()
+                    .map(videoVote -> String.valueOf(videoVote.getUserId()))
+                    .toArray(String[]::new);
+            stringRedisTemplate.opsForSet().add(downvoteKey,downvoteUserIds);
+        }
+    }
+
     private VideoCoin createVideoCoin(String bv,Long userId,Date dateToday)
     {
         VideoCoin videoCoin=new VideoCoin();
@@ -448,8 +521,7 @@ public class VideoServiceImpl implements VideoService
     private VideoVote createVideoVote(String bv, Long userId)
     {
         VideoVote videoVote = new VideoVote();
-        videoVote.setUpvote(false);
-        videoVote.setDownvote(false);
+        videoVote.setVote(0);
         videoVote.setBv(bv);
         videoVote.setUserId(userId);
 

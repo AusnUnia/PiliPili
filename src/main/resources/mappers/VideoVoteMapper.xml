@@ -5,7 +5,7 @@
 
 <mapper namespace="com.ausn.pilipili.dao.VideoVoteDao">
     <insert id="save">
-        insert into video_votes values(#{bv},#{userId},#{upvote},#{downvote});
+        insert into video_votes values(#{bv},#{userId},#{vote});
     </insert>
 
     <delete id="delete">
@@ -22,13 +22,16 @@
         <set>
             bv=#{bv},
             userId=#{userId},
-            upvote=#{upvote},
-            downvote=#{downvote}
+            vote=#{vote},
         </set>
         <where>
             bv=#{bv} and
             userId=#{userId}
         </where>
     </update>
+
+    <select id="getByBv" resultType="VideoVote">
+        select * from video_votes where bv=#{bv}
+    </select>
 
 </mapper>

@@ -21,6 +21,5 @@ public class VideoVote
 {
     private String bv;
     private Long userId;
-    private Boolean downvote;
-    private Boolean upvote;
+    private int vote; // 1 is upvote, 0 is no action, -1 is downvote
 }

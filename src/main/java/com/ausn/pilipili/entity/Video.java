@@ -30,7 +30,7 @@ create table videos
 public class Video {
     private String bv; //视频编号 11位数字或字母
     private String title; //标题
-    private String authorId; //作者id
+    private Long authorId; //作者id
     private Long viewNum; //播放量
     private Timestamp uploadDate; //上传日期
     private Long bulletScreenNum; //弹幕数量

@@ -66,10 +66,17 @@
         update videos set upvoteNum=upvoteNum+#{num} where bv=#{bv}
     </update>
 
+    <update id="setUpvoteNumByBv">
+        update videos set upvoteNum=#{upvoteNum} where bv=#{bv}
+    </update>
+
     <update id="updateDownvoteNumByBv">
         update videos set downvoteNum=downvoteNum+#{num} where bv=#{bv}
     </update>
 
+    <update id="setDownvoteNumByBv">
+        update videos set downvoteNum=#{downvoteNum} where bv=#{bv}
+    </update>
 
     <update id="updateCoinNumByBv">
         update videos set coinNum=coinNum+#{num} where bv=#{bv}

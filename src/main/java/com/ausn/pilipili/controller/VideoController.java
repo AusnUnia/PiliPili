@@ -1,8 +1,6 @@
 package com.ausn.pilipili.controller;
 
-import cn.hutool.json.JSONUtil;
 import com.ausn.pilipili.entity.Video;
-import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
 import com.ausn.pilipili.service.VideoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -21,17 +19,12 @@ public class VideoController
     @PostMapping("/upload")
     public Result upload(MultipartHttpServletRequest request)
     {
-/*        System.out.println(request.getFile("video").getSize());
-        System.out.println(request.getParameter("videoUploadRequest"));
-        VideoUploadRequest videoUploadRequest = JSONUtil.toBean(request.getParameter("videoUploadRequest"), VideoUploadRequest.class);
-        System.out.println(videoUploadRequest);*/
         return videoService.upload(request);
     }
 
     /*
     request for the information of a video
      */
-    //TODO 前端服务器的视频位置还要调试
     @GetMapping("/BV{bv}")
     public Result getByBv(@PathVariable String bv)
     {
@@ -47,6 +40,12 @@ public class VideoController
     public Result upvote(@PathVariable String bv)
     {
         return videoService.upvote(bv);
+    }
+
+    @GetMapping("/upvoteNum/BV{bv}")
+    public Result getUpvoteNumByBv(@PathVariable String bv)
+    {
+        return videoService.getUpvoteNumByBv(bv);
     }
 
     /*
