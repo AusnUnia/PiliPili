@@ -380,7 +380,7 @@ public class VideoServiceImpl implements VideoService
     public Result coin(String bv, int num)
     {
         //the coin number should not be lager than 2
-        if(num>2||num<=0)
+        if(num>2||num<1)
         {
             return Result.fail("can only put 1 or 2 coins every time!");
         }
@@ -388,35 +388,62 @@ public class VideoServiceImpl implements VideoService
         //get current user's id
         Long userId= UserHolder.getUser().getUid();
 
-        //query the information about the coins of a video. when query the coins ,must use the date today, for a user can put coin under the same video in different day.
-        VideoCoin videoCoin=videoCoinDao.getByBvUserIdPutDate(bv,userId, Date.valueOf(LocalDate.now()));
-        if(videoCoin==null) //the user haven't put coin today
+        //get the coin information about the video in redis
+        String key=RedisConstants.VIDEO_COIN_TODAY_CACHE_KEY_PREFIX+bv;
+        Object cachedCoinNum =stringRedisTemplate.opsForHash().get(key, userId.toString());
+        int coinNum=0;
+
+        //must have put coin today
+        if(cachedCoinNum!=null)
         {
-            videoCoin=createVideoCoin(bv,userId, Date.valueOf(LocalDate.now()));
-            if(videoCoin==null)
-            {
-                return Result.fail(ResultCode.SAVE_ERR,"failed to put coin!");
-            }
+            coinNum=Integer.valueOf((String)cachedCoinNum);
         }
 
-        //can't put more coins
-        if(videoCoin.getCoinNum()+num>2)
+        //determine whether refuse the put coin request or not only according to the data in redis
+        //this guarantee that only at most 2 requests can reach mysql for each user every day
+        if(coinNum+num>2)
         {
             return Result.fail("can only put at most 2 coins everyday for one video!");
         }
 
-        //update the relationship between coin, user and the video
-        videoCoin.setCoinNum((short) (videoCoin.getCoinNum()+num));
-        if(videoCoinDao.update(videoCoin)==0)
+        //when reach the mysql, discard those data that got in redis, use the data from mysql.
+        //get the latest coin put from mysql
+        VideoCoin videoCoin = videoCoinDao.getLatestByBvAndUserId(bv, userId);
+        if(  videoCoin==null||videoCoin.getPutDate().before( Date.valueOf(LocalDate.now()) )  ) //haven't put coin today
         {
+            videoCoin=createVideoCoin(bv,userId);
+        }
+
+        //this operation is to guarantee the consistence of mysql
+        if(videoCoin.getCoinNum()+num>2)
+        {
+            return Result.fail("can only put at most 2 coins everyday for one video!");
+        }
+        videoCoin.setCoinNum(videoCoin.getCoinNum()+num);
+
+        //update the relationship between coin, user and the video in mysql
+        System.out.println(videoCoin);
+        if(videoCoin.getId()==null) //haven't put coin today,so the videoCoin is a new VideoCoin which has no id yet, should save in mysql
+        {
+            videoCoinDao.save(videoCoin);
+        }
+        else if(videoCoinDao.update(videoCoin)==0) // have put coin today, update it.
+        {
+            System.out.println("videoCoinDao.update(videoCoin)=0!!!!!!!!!!!!!!!");
             return Result.fail(ResultCode.UPDATE_ERR,"failed to put coin!");
         }
 
         //update the coins number in video
         if(videoDao.updateCoinNumByBv(bv,num)==0)
         {
+            System.out.println("videoDao.updateCoinNumByBv(bv,num)=0&&&&&&&&&&&&&");
             return Result.fail(ResultCode.UPDATE_ERR,"failed to put coin!");
         }
+
+
+        //update data in redis
+        stringRedisTemplate.opsForHash().put(key,userId.toString(),videoCoin.getCoinNum().toString());
+        stringRedisTemplate.delete(RedisConstants.VIDEO_COIN_NUM_CACHE_KEY_PREFIX+bv); //delete the cached coin number
 
         return Result.ok(ResultCode.UPDATE_OK);
     }
@@ -461,6 +488,43 @@ public class VideoServiceImpl implements VideoService
         return Result.ok(ResultCode.GET_OK,upvoteNum);
     }
 
+    @Override
+    public Result getCoinNumByBv(String bv)
+    {
+        //get the key
+        String key=RedisConstants.VIDEO_COIN_NUM_CACHE_KEY_PREFIX + bv;
+
+        //see if in redis first
+        Boolean isExist = stringRedisTemplate.hasKey(key);
+        Long coinNum=null;
+
+        //if not in redis , reconstruct it
+        if(isExist==null||!isExist)
+        {
+            RLock lock = redissonClient.getLock(RedisConstants.VIDEO_COIN_NUM_LOCK_KEY_PREFIX + bv);
+            boolean isLocked=lock.tryLock();
+            if(isLocked)
+            {
+                try
+                {
+                    coinNum = videoDao.getCoinNumByBv(bv);
+                    stringRedisTemplate.opsForValue().set(key,coinNum.toString());
+                }
+                finally
+                {
+                    lock.unlock();
+                }
+            }
+        }
+
+        if(coinNum==null)
+        {
+            coinNum = Long.valueOf(stringRedisTemplate.opsForValue().get(key));
+        }
+
+        return Result.ok(ResultCode.GET_OK,coinNum);
+    }
+
 
     private void loadVoteIntoRedis(String bv)
     {
@@ -501,19 +565,13 @@ public class VideoServiceImpl implements VideoService
         }
     }
 
-    private VideoCoin createVideoCoin(String bv,Long userId,Date dateToday)
+    private VideoCoin createVideoCoin(String bv,Long userId)
     {
         VideoCoin videoCoin=new VideoCoin();
-        videoCoin.setCoinNum((short) 0);
+        videoCoin.setCoinNum(0);
         videoCoin.setBv(bv);
         videoCoin.setUserId(userId);
-        videoCoin.setPutDate(dateToday);
-
-        if(videoCoinDao.save(videoCoin)==0)
-        {
-            System.out.println("failed to save videoCoin!");
-            return null;
-        }
+        videoCoin.setPutDate(Date.valueOf(LocalDate.now()));
 
         return videoCoin;
     }

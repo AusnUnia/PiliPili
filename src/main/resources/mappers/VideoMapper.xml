@@ -82,6 +82,10 @@
         update videos set coinNum=coinNum+#{num} where bv=#{bv}
     </update>
 
+    <select id="getCoinNumByBv" resultType="long">
+        select coinNum from videos where bv=#{bv}
+    </select>
+
     <update id="updateSaveNumByBv">
         update videos set saveNum=saveNum+#{num} where bv=#{bv}
     </update>

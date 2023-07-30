@@ -1,6 +1,7 @@
 package com.ausn.pilipili.controller;
 
 import com.ausn.pilipili.entity.UserComment;
+import com.ausn.pilipili.entity.requestEntity.CommentPublishRequest;
 import com.ausn.pilipili.service.UserCommentService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -24,17 +25,10 @@ public class UserCommentController
     }
 
     //发布评论
-    @PostMapping("/BV{bv}")
-    public Result publish(@RequestBody UserComment userComment,@PathVariable String bv)
+    @PostMapping("/publish")
+    public Result publish(@RequestBody CommentPublishRequest commentPublishRequest)
     {
-        if(!bv.equals(userComment.getBv()))
-        {
-            return new Result(ResultCode.SAVE_ERR,"评论发布失败,视频和评论bv号不对应",false);
-        }
-        boolean flag=userCommentService.publish(userComment);
-        int code=flag?ResultCode.SAVE_OK:ResultCode.SAVE_ERR;
-        String msg=flag?"":"评论发布失败";
-        return new Result(code,msg,flag);
+        return userCommentService.publish(commentPublishRequest);
     }
 
     //删除评论

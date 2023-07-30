@@ -16,4 +16,11 @@ public class RedisConstants
     static public final String VIDEO_VOTE_LOCK_KEY_PREFIX="lock:video_vote:"; //usage: key is lock:video_vote:<bv>, value is determined by Redisson.
                                                                          // Used to reconstruct the cache of "video_upvote:","video_novote:" and "video_downvote:"
 
+
+    static public final String VIDEO_COIN_TODAY_CACHE_KEY_PREFIX="video_coin:"; // usage: key is video_coin:<bv>, it corresponds to a hash, and fields
+                                                                                // are user's ids, the value of a field is the coin number. This hash contains users who put coins today
+    static public final String VIDEO_COIN_NUM_CACHE_KEY_PREFIX="video_coin_num:"; // usage: key is video_coin_num:<bv> , value is the cached coins number of the video
+    static public final String VIDEO_COIN_NUM_LOCK_KEY_PREFIX="lock:video_coin_num:";//usage: key is lock:video_coin_num:<bv>, value is determined by Redisson.
+                                                                                    // Used to reconstruct the cache of "video_coin_num:"
+    static public final String VIDEO_FAVORITE_CACHE_KEY_PREFIX="video_favorite:";//usage: key is video_upvote:<bv>, value is a set which contains users who upvoted this video.
 }

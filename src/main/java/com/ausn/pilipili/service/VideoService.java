@@ -17,4 +17,5 @@ public interface VideoService
     public Result coin(String bv, int num);
     public Result favorite(String bv);
     public Result getUpvoteNumByBv(String bv);
+    public Result getCoinNumByBv(String bv);
 }

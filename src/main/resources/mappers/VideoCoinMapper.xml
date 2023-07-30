@@ -5,27 +5,35 @@
 
 <mapper namespace="com.ausn.pilipili.dao.VideoCoinDao">
     <insert id="save">
-        insert into video_coins values(#{bv},#{userId},#{coinNum},#{putDate});
+        insert into video_coins (bv,userId,coinNum,putDate) values(#{bv},#{userId},#{coinNum},#{putDate});
     </insert>
 
     <delete id="delete">
         delete from video_coins where bv=#{bv} and userId=#{userId} and putDate=#{putDate}
     </delete>
 
-    <select id="getByBvUserIdPutDate" resultType="VideoCoin">
-        select * from video_coins where bv=#{bv} and userId=#{userId} and putDate=#{putDate}
+    <select id="getByBvAndUserId" resultType="VideoCoin">
+        select * from video_coins where bv=#{bv} and userId=#{userId}
     </select>
 
+    <select id="getLatestByBvAndUserId" resultType="VideoCoin">
+        select * from video_coins where bv=#{bv} and userId=#{userId} order by putDate desc limit 1
+    </select>
+
+    <select id="getByBv" resultType="VideoCoin">
+        select * from video_coins where bv=#{bv}
+    </select>
 
     <update id="update">
         update video_coins
         <set>
-            coinNum=#{coinNum}
+            bv=#{bv},
+            userId=#{userId},
+            coinNum=#{coinNum},
+            putDate=#{putDate}
         </set>
         <where>
-            bv=#{bv} and
-            userId=#{userId} and
-            putDate=#{putDate}
+            id=#{id}
         </where>
     </update>
 

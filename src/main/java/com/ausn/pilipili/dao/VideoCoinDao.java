@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
 import java.sql.Date;
+import java.util.List;
 
 /**
  * @Author: 付显贵
@@ -16,7 +17,9 @@ import java.sql.Date;
 public interface VideoCoinDao
 {
     public int save(VideoCoin videoVote);
-    public int delete(@Param("bv") String bv, @Param("userId")Long userId);
-    public VideoCoin getByBvUserIdPutDate(@Param("bv") String bv, @Param("userId")Long userId, @Param("putDate")Date putDate);
+    public int delete(@Param("id") Long id);
+    public List<VideoCoin> getByBvAndUserId(@Param("bv") String bv, @Param("userId")Long userId);
+    public VideoCoin getLatestByBvAndUserId(@Param("bv") String bv, @Param("userId")Long userId);
+    public List<VideoCoin> getByBv(@Param("bv") String bv);
     public int update(VideoCoin videoCoin);
 }

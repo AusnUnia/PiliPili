@@ -24,7 +24,7 @@ public class UserComment
 {
     private Long commentId; //评论编号
     private String bv; //所属视频编号
-    private String userId;  //发布评论的用户的id
+    private Long userId;  //发布评论的用户的id
     private Timestamp sendDate; //评论发布日期
     private String content; //评论内容
     private int upvoteNum; //点赞数量

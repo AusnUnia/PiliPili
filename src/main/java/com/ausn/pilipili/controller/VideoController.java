@@ -63,6 +63,12 @@ public class VideoController
         return videoService.coin(bv,num);
     }
 
+    @GetMapping("/coinNum/BV{bv}")
+    public Result getCoinNumByBv(@PathVariable String bv)
+    {
+        return videoService.getCoinNumByBv(bv);
+    }
+
     @PostMapping("/favorite/BV{bv}")
     public Result save(@PathVariable String bv)
     {
