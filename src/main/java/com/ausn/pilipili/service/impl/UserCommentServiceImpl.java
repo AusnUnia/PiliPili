@@ -1,6 +1,8 @@
 package com.ausn.pilipili.service.impl;
 
+import com.alibaba.fastjson2.JSON;
 import com.ausn.pilipili.controller.Result;
+import com.ausn.pilipili.controller.ResultCode;
 import com.ausn.pilipili.dao.UserCommentDao;
 import com.ausn.pilipili.dao.VideoDao;
 import com.ausn.pilipili.entity.UserComment;
@@ -8,7 +10,11 @@ import com.ausn.pilipili.entity.requestEntity.CommentPublishRequest;
 import com.ausn.pilipili.service.UserCommentService;
 import com.ausn.pilipili.utils.UserHolder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
+import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -22,6 +28,9 @@ public class UserCommentServiceImpl implements UserCommentService
 
     @Autowired
     private VideoDao videoDao;
+
+    @Autowired
+    private KafkaTemplate<String,String> kafkaTemplate;
 
     @Override
     public Result publish(CommentPublishRequest commentPublishRequest)
@@ -44,8 +53,34 @@ public class UserCommentServiceImpl implements UserCommentService
         userComment.setContent(commentPublishRequest.getContent());
 
         //TODO 用消息队列异步将评论存入mysql
+        kafkaTemplate.send("comment_topic", JSON.toJSONString(userComment)).addCallback
+        (
+            new ListenableFutureCallback<SendResult<String,String>>()
+            {
+                @Override
+                public void onSuccess(SendResult<String, String> result)
+                {
+                    //TODO 用WebSocket异步通知给前端
+                    System.out.println("评论发送成功！！！！！");
+                }
 
-        return null;
+                @Override
+                public void onFailure(Throwable ex)
+                {
+                    //TODO 用WebSocket异步通知给前端
+                    System.out.println("评论发送失败！！！！！");
+
+                }
+            }
+        );
+
+        return Result.ok(ResultCode.DEFAULT_OK,"评论已发送");
+    }
+
+    @KafkaListener(topics = "comment_topic",groupId = "comment_group")
+    public void saveCommentToMysql(String userCommentStr)
+    {
+        userCommentDao.save(JSON.parseObject(userCommentStr,UserComment.class));
     }
 
     private UserComment createUserComment(String bv,Long userId)
@@ -59,15 +94,21 @@ public class UserCommentServiceImpl implements UserCommentService
         userComment.setReplyNum(0);
         return userComment;
     }
+
+    @Override
     public boolean delete(UserComment userComment)
     {
         return userCommentDao.delete(userComment)>0&&
                 videoDao.updateCommentNumByBv(userComment.getBv(),-1)>0;
     }
+
+    @Override
     public List<UserComment> getByBv(String bv)
     {
         return userCommentDao.getByBv(bv);
     }
+
+    @Override
     public boolean update(UserComment userComment)
     {
         return userCommentDao.update(userComment)>0;

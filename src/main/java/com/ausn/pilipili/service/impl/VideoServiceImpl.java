@@ -1,10 +1,7 @@
 package com.ausn.pilipili.service.impl;
 
-import cn.hutool.core.bean.BeanUtil;
-import cn.hutool.core.bean.copier.CopyOptions;
-import cn.hutool.core.lang.Snowflake;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.ausn.pilipili.controller.Result;
 import com.ausn.pilipili.controller.ResultCode;
 import com.ausn.pilipili.dao.VideoCoinDao;
@@ -22,21 +19,16 @@ import com.ausn.pilipili.utils.constants.RedisConstants;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
-import org.redisson.client.RedisClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
-import org.springframework.util.IdGenerator;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import javax.servlet.ServletContext;
 import java.io.File;
 import java.io.IOException;
 import java.sql.Date;
@@ -44,7 +36,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
@@ -99,7 +90,7 @@ public class VideoServiceImpl implements VideoService
 
         //parse the VideoUploadRequest which contains the title, description and tags of the uploading video
         String jsonStr = request.getParameter("videoUploadRequest");
-        VideoUploadRequest videoUploadRequest=JSONUtil.toBean(jsonStr,VideoUploadRequest.class);
+        VideoUploadRequest videoUploadRequest=JSON.parseObject(jsonStr,VideoUploadRequest.class);
 
         //generate the bv for the video.
         String bv= bvGenerator.generateBv();
@@ -205,7 +196,7 @@ public class VideoServiceImpl implements VideoService
         String videoJson = stringRedisTemplate.opsForValue().get(key);
         if(StrUtil.isNotBlank(videoJson))
         {
-            video= JSONUtil.toBean(videoJson,Video.class);
+            video= JSON.parseObject(videoJson,Video.class);
             return Result.ok(ResultCode.GET_OK,video);
         }
 
@@ -224,7 +215,7 @@ public class VideoServiceImpl implements VideoService
                     stringRedisTemplate.opsForValue().set(key,"",RedisConstants.VIDEO_CACHE_TTL, TimeUnit.MINUTES);
                     return Result.fail(ResultCode.GET_ERR,"no such video!");
                 }
-                stringRedisTemplate.opsForValue().set(key,JSONUtil.toJsonStr(video),RedisConstants.VIDEO_CACHE_TTL, TimeUnit.MINUTES);
+                stringRedisTemplate.opsForValue().set(key,JSON.toJSONString(video),RedisConstants.VIDEO_CACHE_TTL, TimeUnit.MINUTES);
                 return Result.ok(ResultCode.GET_OK,video);
             }
             finally
