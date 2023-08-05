@@ -15,6 +15,7 @@ import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
 import com.ausn.pilipili.service.VideoService;
 import com.ausn.pilipili.utils.BvGenerator;
 import com.ausn.pilipili.utils.UserHolder;
+import com.ausn.pilipili.utils.constants.LocalConstants;
 import com.ausn.pilipili.utils.constants.RedisConstants;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
@@ -29,8 +30,10 @@ import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.sql.Date;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -96,9 +99,10 @@ public class VideoServiceImpl implements VideoService
         String bv= bvGenerator.generateBv();
 
         //create the path for video file
-        String resourcesPath="C:\\Users\\16377\\Desktop\\Java\\nginx-1.24.0\\html\\pilipili\\video_src\\";
+        String resourcesPath= LocalConstants.VIDEO_SRC_PATH;
 
-        String relativePath="..\\video_src\\BV"+bv+".mp4"; //the front end server can find the source of the video through this path
+        String relativePath=LocalConstants.VIDEO_RELATIVE_PATH_PREFIX
+                + bv+ LocalConstants.VIDEO_RELATIVE_PATH_SUFFIX; //the front end server can find the source of the video through this path
 
         //create the entity of the video which will be stored in mysql
         Video video= VideoConverter.toVideo(videoUploadRequest);
@@ -149,7 +153,6 @@ public class VideoServiceImpl implements VideoService
 
         //save the video file
         String videoFilePath=resourcesPath+relativePath;
-        System.out.println(videoFilePath);
         try
         {
             videoFile.transferTo(new File(videoFilePath));
@@ -166,6 +169,142 @@ public class VideoServiceImpl implements VideoService
         }
 
         return Result.ok(ResultCode.SAVE_OK);
+    }
+
+    @Override
+    @Transactional
+    public Result upload2(MultipartHttpServletRequest request)
+    {
+        MultipartFile chunkFile = request.getFile("chunk");
+        if(chunkFile!=null&&!chunkFile.isEmpty())
+        {
+            handleChunk(request);
+            return Result.ok(ResultCode.SAVE_OK,"succeeded to save chunk");
+        }
+
+        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+
+        //parse the VideoUploadRequest which contains the title, description and tags of the uploading video
+        String jsonStr = request.getParameter("videoUploadRequest");
+        if(jsonStr==null||jsonStr.isEmpty())
+        {
+            return Result.fail("no video information needed!");
+        }
+        VideoUploadRequest videoUploadRequest=JSON.parseObject(jsonStr,VideoUploadRequest.class);
+
+        //allocate a bv and create the video entity
+        String bv=bvGenerator.generateBv();
+        Video video=createNewVideo(videoUploadRequest,bv);
+
+        //save the video information in mysql. the bv may duplicate, so when first duplicate occur, generate another bv.
+        try
+        {
+            videoDao.save(video);
+        }
+        catch (SQLException e)
+        {
+            if(e.getErrorCode()==1062) //the primary key is duplicated, try to generate a new bv
+            {
+                bv=bvGenerator.generateBv();
+                video.setBv(bv);
+                try
+                {
+                    videoDao.save(video);
+                }
+                catch (SQLException ex)
+                {
+                    if(ex.getErrorCode()==1062)
+                    {
+                        return Result.fail(ResultCode.SAVE_ERR,"failed to save video! bv duplicated!");
+                    }
+                    return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
+                }
+            }
+            else
+            {
+                return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
+            }
+        }
+
+        try
+        {
+            mergeChunks(bv,request);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return Result.ok(ResultCode.SAVE_OK);
+    }
+
+    private void handleChunk(MultipartHttpServletRequest request)
+    {
+        MultipartFile chunkFile = request.getFile("chunk");
+        Long seqNum=Long.valueOf(request.getParameter("seqNum"));
+        String videoId=request.getParameter("videoId");
+
+
+        // create the path for chunk file
+        Path tempFilePath = Path.of(LocalConstants.VIDEO_TMP_PATH, videoId+"_"+seqNum + ".part");
+
+        // save chunk file to temporary folder
+        try (InputStream inputStream = chunkFile.getInputStream())
+        {
+            Files.copy(inputStream, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
+        }
+        catch (IOException e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private Video createNewVideo(VideoUploadRequest videoUploadRequest,String bv)
+    {
+        String relativePath=LocalConstants.VIDEO_RELATIVE_PATH_PREFIX
+                + bv+ LocalConstants.VIDEO_RELATIVE_PATH_SUFFIX; //the front end server can find the source of the video through this path
+
+        //create the entity of the video which will be stored in mysql
+        Video video= VideoConverter.toVideo(videoUploadRequest);
+
+        video.setBv(bv);
+        video.setAuthorId(UserHolder.getUser().getUid());
+        video.setViewNum(0L);
+        video.setUploadDate(Timestamp.valueOf(LocalDateTime.now()));
+        video.setBulletScreenNum(0L);
+        video.setCommentNum(0L);
+        video.setSaveNum(0L);
+        video.setShareNum(0L);
+        video.setUpvoteNum(0L);
+        video.setDownvoteNum(0L);
+        video.setCoinNum(0L);
+        video.setVideoPath(relativePath);
+
+        return video;
+    }
+
+    private void mergeChunks(String bv,MultipartHttpServletRequest request) throws IOException
+    {
+        //TODO chunk文件还没到齐就开始merge，视频会缺失
+        String videoId = request.getParameter("videoId");
+        Long totalSize=Long.valueOf(request.getParameter("totalSize"));
+        Long chunkSize=Long.valueOf(request.getParameter("chunkSize"));
+
+
+        Path videoFilePath = Path.of(LocalConstants.VIDEO_SRC_PATH,"BV"+bv+".mp4");
+
+        try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(videoFilePath.toFile())))
+        {
+            for (int seqNum = 0; seqNum < totalSize/chunkSize; seqNum++) {
+                // 读取临时文件
+                Path tempFilePath = Path.of(LocalConstants.VIDEO_TMP_PATH, videoId+"_"+seqNum + ".part");
+                byte[] chunkData = Files.readAllBytes(tempFilePath);
+
+                // 写入目标文件
+                outputStream.write(chunkData);
+
+                // 删除临时文件
+                Files.deleteIfExists(tempFilePath);
+            }
+        }
     }
 
     @Override

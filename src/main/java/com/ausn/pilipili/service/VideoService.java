@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
 public interface VideoService
 {
     public Result upload(MultipartHttpServletRequest request);
+    public Result upload2(MultipartHttpServletRequest request);
     public Result delete(Video video);
     public Result getByBv(String bv);
     public Result getByAuthorId(String authorId);
