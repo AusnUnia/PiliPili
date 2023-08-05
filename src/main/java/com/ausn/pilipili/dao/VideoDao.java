@@ -29,4 +29,5 @@ public interface VideoDao
     public Long getCoinNumByBv(@Param("bv") String bv);
     public int updateSaveNumByBv(@Param("bv") String bv,@Param("num") int num);
     public int updateShareNumByBv(@Param("bv") String bv,@Param("num") int num);
+    public List<String> getBvByPage(@Param("offset") int offset,@Param("pageSize") int pageSize);
 }

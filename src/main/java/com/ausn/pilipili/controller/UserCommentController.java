@@ -1,5 +1,7 @@
 package com.ausn.pilipili.controller;
 
+import com.ausn.pilipili.common.Result;
+import com.ausn.pilipili.common.ResultCode;
 import com.ausn.pilipili.entity.UserComment;
 import com.ausn.pilipili.entity.requestEntity.CommentPublishRequest;
 import com.ausn.pilipili.service.UserCommentService;

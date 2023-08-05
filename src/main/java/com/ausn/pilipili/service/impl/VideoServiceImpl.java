@@ -2,8 +2,8 @@ package com.ausn.pilipili.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
-import com.ausn.pilipili.controller.Result;
-import com.ausn.pilipili.controller.ResultCode;
+import com.ausn.pilipili.common.Result;
+import com.ausn.pilipili.common.ResultCode;
 import com.ausn.pilipili.dao.VideoCoinDao;
 import com.ausn.pilipili.dao.VideoDao;
 import com.ausn.pilipili.dao.VideoVoteDao;
@@ -55,7 +55,7 @@ public class VideoServiceImpl implements VideoService
 
 
     @Autowired
-    private RBloomFilter<String> rBloomFilter;
+    private RBloomFilter<String> bloomFilter;
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
     @Autowired
@@ -159,6 +159,12 @@ public class VideoServiceImpl implements VideoService
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly(); //failed to save the video file, rollback this service
         }
 
+        //save the bv into bloom filter
+        if(!bloomFilter.add(bv))
+        {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        }
+
         return Result.ok(ResultCode.SAVE_OK);
     }
 
@@ -183,14 +189,15 @@ public class VideoServiceImpl implements VideoService
          */
 
         Video video=null;
+        String key= RedisConstants.VIDEO_CACHE_KEY_PREFIX+bv;
 
         //use bloom filter to determine whether the data may exist in redis or mysql or not
-        String key= RedisConstants.VIDEO_CACHE_KEY_PREFIX+bv;
-/*        if(!rBloomFilter.contains(key))
+
+        if(!bloomFilter.contains(bv))
         {
             System.out.println("bloom filter rejected!");
             return Result.fail(ResultCode.GET_ERR,"no such video!");
-        }*/
+        }
 
         //the request passed the bloom filter, then query it in redis
         String videoJson = stringRedisTemplate.opsForValue().get(key);
@@ -304,65 +311,9 @@ public class VideoServiceImpl implements VideoService
 
     @Transactional
     @Override
-    public Result downvote(String bv) {
-/*
-
-        //get current user's id
-        Long userId= UserHolder.getUser().getUid();
-
-        //query the information about the votes of a video
-        VideoVote videoVote=videoVoteDao.getByBvUserId(bv,userId);
-        if(videoVote==null)
-        {
-            videoVote=createVideoVote(bv,userId);
-            if(videoVote==null)
-            {
-                return Result.fail(ResultCode.SAVE_ERR,"failed to upvote!");
-            }
-        }
-
-        //do downvote or cancel the downvote
-        ///if the user is downvote or canceling the upvote, the upvote should always be false
-
-        if(videoVote.getUpvote())
-        {
-            videoVote.setUpvote(false);
-
-            ///update the upvote number of the video at the same time
-            if(videoDao.updateUpvoteNumByBv(bv,-1)==0)
-            {
-                return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
-            }
-        }
-
-        if(videoVote.getDownvote())
-        {
-            ///if the user has downvoted, cancel the downvote
-            videoVote.setDownvote(false);
-
-            ///update the downvote number of the video at the same time
-            if(videoDao.updateDownvoteNumByBv(bv,-1)==0)
-            {
-                return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
-            }
-        }
-        else
-        {
-            ///if the user has not downvoted, do downvote
-            videoVote.setDownvote(true);
-
-            ///update the downvote number of the video at the same time
-            if(videoDao.updateDownvoteNumByBv(bv,1)==0)
-            {
-                return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
-            }
-        }
-
-        if(videoVoteDao.update(videoVote)==0)
-        {
-            return Result.fail(ResultCode.UPDATE_ERR,"failed to downvote!");
-        }*/
-
+    public Result downvote(String bv)
+    {
+        //TODO
         return Result.ok(ResultCode.UPDATE_OK);
     }
 
@@ -450,10 +401,14 @@ public class VideoServiceImpl implements VideoService
     @Override
     public Result getUpvoteNumByBv(String bv)
     {
-        //get the key
-        String key=RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX + bv;
+        //see if in bloom filter
+        if(!bloomFilter.contains(bv))
+        {
+            return Result.fail(ResultCode.GET_ERR,"the video doesn't exist!");
+        }
 
-        //see if in redis first
+        //then, see if in redis
+        String key=RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX + bv;
         Boolean isExist = stringRedisTemplate.hasKey(key);
 
         //if not in redis , reconstruct is
@@ -482,10 +437,15 @@ public class VideoServiceImpl implements VideoService
     @Override
     public Result getCoinNumByBv(String bv)
     {
-        //get the key
-        String key=RedisConstants.VIDEO_COIN_NUM_CACHE_KEY_PREFIX + bv;
+        //see if in bloom filter first
+        if(!bloomFilter.contains(bv))
+        {
+            return Result.fail(ResultCode.GET_ERR,"the video doesn't exist!");
+        }
 
-        //see if in redis first
+
+        //then, see if in redis first
+        String key=RedisConstants.VIDEO_COIN_NUM_CACHE_KEY_PREFIX + bv;
         Boolean isExist = stringRedisTemplate.hasKey(key);
         Long coinNum=null;
 
@@ -499,7 +459,8 @@ public class VideoServiceImpl implements VideoService
                 try
                 {
                     coinNum = videoDao.getCoinNumByBv(bv);
-                    stringRedisTemplate.opsForValue().set(key,coinNum.toString());
+                    stringRedisTemplate.opsForValue()
+                            .set(key,coinNum.toString(),RedisConstants.VIDEO_COIN_NUM_CACHE_TTL,TimeUnit.MINUTES);
                 }
                 finally
                 {
@@ -508,9 +469,17 @@ public class VideoServiceImpl implements VideoService
             }
         }
 
+        //the data is probably in redis, but may also be expired before this line and
+        // after judging "Boolean isExist = stringRedisTemplate.hasKey(key);"
         if(coinNum==null)
         {
-            coinNum = Long.valueOf(stringRedisTemplate.opsForValue().get(key));
+            String coinNumStr = stringRedisTemplate.opsForValue().get(key);
+            if(coinNumStr!=null&&!coinNumStr.isEmpty())
+            {
+                //the data is still in redis, refresh the ttl when get it.
+                stringRedisTemplate.expire(key,RedisConstants.VIDEO_COIN_NUM_CACHE_TTL,TimeUnit.MINUTES);
+                coinNum=Long.valueOf(coinNumStr);
+            }
         }
 
         return Result.ok(ResultCode.GET_OK,coinNum);

@@ -1,4 +1,4 @@
-package com.ausn.pilipili.controller;
+package com.ausn.pilipili.common;
 
 import lombok.Getter;
 import lombok.Setter;

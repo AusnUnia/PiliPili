@@ -1,5 +1,6 @@
 package com.ausn.pilipili.controller;
 
+import com.ausn.pilipili.common.Result;
 import com.ausn.pilipili.entity.Video;
 import com.ausn.pilipili.service.VideoService;
 import org.springframework.beans.factory.annotation.Autowired;

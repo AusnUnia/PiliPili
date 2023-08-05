@@ -28,5 +28,4 @@ public class UserReply
     private String content; //回复内容
     private int upvoteNum; //点赞数量
     private int downvoteNum; //点踩数量
-
 }

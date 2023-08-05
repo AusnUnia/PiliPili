@@ -21,7 +21,7 @@ import java.util.Set;
  */
 
 @Component
-public class RedisToMysqlTask
+public class ScheduledTask
 {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;
@@ -31,7 +31,18 @@ public class RedisToMysqlTask
     private VideoVoteDao videoVoteDao;
 
 
-    @Scheduled(fixedRate = 10000) //每10秒执行一次
+    @Scheduled(cron = "0 0 0 * * ?") // 每天零点触发任务
+    public void expireKeyAtMidnight()
+    {
+        Set<String> keys = stringRedisTemplate.keys( RedisConstants.VIDEO_COIN_TODAY_CACHE_KEY_PREFIX+ "*");
+        if(keys!=null&&!keys.isEmpty())
+        {
+            stringRedisTemplate.delete(keys);
+        }
+    }
+
+
+    @Scheduled(fixedRate = 60000) //每60秒执行一次
     @Transactional
     public void persistData()
     {

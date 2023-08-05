@@ -1,6 +1,6 @@
 package com.ausn.pilipili.service;
 
-import com.ausn.pilipili.controller.Result;
+import com.ausn.pilipili.common.Result;
 import com.ausn.pilipili.entity.Video;
 import org.springframework.web.multipart.MultipartHttpServletRequest;
 

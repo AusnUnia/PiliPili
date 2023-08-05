@@ -93,4 +93,8 @@
     <update id="updateShareNumByBv">
         update videos set shareNum=shareNum+#{num} where bv=#{bv}
     </update>
+
+    <select id="getBvByPage" resultType="String">
+        select bv from videos limit #{offset},#{pageSize}
+    </select>
 </mapper>

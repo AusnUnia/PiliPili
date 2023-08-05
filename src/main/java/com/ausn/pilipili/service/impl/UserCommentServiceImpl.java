@@ -1,8 +1,8 @@
 package com.ausn.pilipili.service.impl;
 
 import com.alibaba.fastjson2.JSON;
-import com.ausn.pilipili.controller.Result;
-import com.ausn.pilipili.controller.ResultCode;
+import com.ausn.pilipili.common.Result;
+import com.ausn.pilipili.common.ResultCode;
 import com.ausn.pilipili.dao.UserCommentDao;
 import com.ausn.pilipili.dao.VideoDao;
 import com.ausn.pilipili.entity.UserComment;
@@ -14,6 +14,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import java.sql.Timestamp;
@@ -78,9 +79,12 @@ public class UserCommentServiceImpl implements UserCommentService
     }
 
     @KafkaListener(topics = "comment_topic",groupId = "comment_group")
+    @Transactional
     public void saveCommentToMysql(String userCommentStr)
     {
-        userCommentDao.save(JSON.parseObject(userCommentStr,UserComment.class));
+        UserComment userComment=JSON.parseObject(userCommentStr,UserComment.class);
+        userCommentDao.save(userComment);
+        videoDao.updateCommentNumByBv(userComment.getBv(),1);
     }
 
     private UserComment createUserComment(String bv,Long userId)
@@ -105,6 +109,7 @@ public class UserCommentServiceImpl implements UserCommentService
     @Override
     public List<UserComment> getByBv(String bv)
     {
+        //TODO 加布隆过滤和redis缓存
         return userCommentDao.getByBv(bv);
     }
 
