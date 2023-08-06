@@ -80,9 +80,13 @@ public class VideoServiceImpl implements VideoService
 
     private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(8);
 
+
+    /*
+    upload the whole video file in one request
+     */
     @Override
     @Transactional
-    public Result upload(MultipartHttpServletRequest request)
+    public Result uploadWhole(MultipartHttpServletRequest request)
     {
         //parse the video file
         MultipartFile videoFile = request.getFile("video");
@@ -105,20 +109,7 @@ public class VideoServiceImpl implements VideoService
                 + bv+ LocalConstants.VIDEO_RELATIVE_PATH_SUFFIX; //the front end server can find the source of the video through this path
 
         //create the entity of the video which will be stored in mysql
-        Video video= VideoConverter.toVideo(videoUploadRequest);
-
-        video.setBv(bv);
-        video.setAuthorId(UserHolder.getUser().getUid());
-        video.setViewNum(0L);
-        video.setUploadDate(Timestamp.valueOf(LocalDateTime.now()));
-        video.setBulletScreenNum(0L);
-        video.setCommentNum(0L);
-        video.setSaveNum(0L);
-        video.setShareNum(0L);
-        video.setUpvoteNum(0L);
-        video.setDownvoteNum(0L);
-        video.setCoinNum(0L);
-        video.setVideoPath(relativePath);
+        Video video= createNewVideo(videoUploadRequest,bv);
 
 
         //save the video information in mysql. the bv may duplicate , so when first duplicate occur, generate another bv.
@@ -173,17 +164,19 @@ public class VideoServiceImpl implements VideoService
 
     @Override
     @Transactional
-    public Result upload2(MultipartHttpServletRequest request)
+    public Result upload(MultipartHttpServletRequest request)
     {
+        //get the chunk file
         MultipartFile chunkFile = request.getFile("chunk");
+
+        //save the chunk file to temporary folder
         if(chunkFile!=null&&!chunkFile.isEmpty())
         {
             handleChunk(request);
             return Result.ok(ResultCode.SAVE_OK,"succeeded to save chunk");
         }
 
-        System.out.println("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-
+        //the chunk file is null, this means this is the last request for uploading the video.
         //parse the VideoUploadRequest which contains the title, description and tags of the uploading video
         String jsonStr = request.getParameter("videoUploadRequest");
         if(jsonStr==null||jsonStr.isEmpty())
@@ -226,11 +219,20 @@ public class VideoServiceImpl implements VideoService
             }
         }
 
+        //merge all chunks into a video file
         try
         {
             mergeChunks(bv,request);
-        } catch (IOException e) {
+        }
+        catch (Exception e)
+        {
             throw new RuntimeException(e);
+        }
+
+        //add the bv of the new video into bloom filter
+        if(!bloomFilter.add(bv))
+        {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         }
 
         return Result.ok(ResultCode.SAVE_OK);
@@ -238,15 +240,15 @@ public class VideoServiceImpl implements VideoService
 
     private void handleChunk(MultipartHttpServletRequest request)
     {
+        //parse the information about the chunk file
         MultipartFile chunkFile = request.getFile("chunk");
         Long seqNum=Long.valueOf(request.getParameter("seqNum"));
         String videoId=request.getParameter("videoId");
 
-
         // create the path for chunk file
         Path tempFilePath = Path.of(LocalConstants.VIDEO_TMP_PATH, videoId+"_"+seqNum + ".part");
 
-        // save chunk file to temporary folder
+        // save chunk file to the temporary directory
         try (InputStream inputStream = chunkFile.getInputStream())
         {
             Files.copy(inputStream, tempFilePath, StandardCopyOption.REPLACE_EXISTING);
@@ -281,27 +283,45 @@ public class VideoServiceImpl implements VideoService
         return video;
     }
 
-    private void mergeChunks(String bv,MultipartHttpServletRequest request) throws IOException
+    private void mergeChunks(String bv,MultipartHttpServletRequest request) throws IOException, InterruptedException
     {
-        //TODO chunk文件还没到齐就开始merge，视频会缺失
+        //parse the information about the video file
         String videoId = request.getParameter("videoId");
         Long totalSize=Long.valueOf(request.getParameter("totalSize"));
         Long chunkSize=Long.valueOf(request.getParameter("chunkSize"));
 
-
+        //create a directory for the final video file
         Path videoFilePath = Path.of(LocalConstants.VIDEO_SRC_PATH,"BV"+bv+".mp4");
 
+        //write all chunk files into the final video file in order.
         try (BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(videoFilePath.toFile())))
         {
-            for (int seqNum = 0; seqNum < totalSize/chunkSize; seqNum++) {
-                // 读取临时文件
+            for (int seqNum = 0; seqNum <= totalSize/chunkSize; seqNum++)
+            {
+                //read the chunk file with sequence number "seqNum" and video id "videoId"
                 Path tempFilePath = Path.of(LocalConstants.VIDEO_TMP_PATH, videoId+"_"+seqNum + ".part");
-                byte[] chunkData = Files.readAllBytes(tempFilePath);
 
-                // 写入目标文件
+                //if the chunk file is still uploading, wait at most 30s
+                for(int i=0;i<30;i++)
+                {
+                    if(Files.exists(tempFilePath))
+                    {
+                        break;
+                    }
+                    Thread.sleep(1000);
+                }
+
+                //the chunk file lost
+                if(!Files.exists(tempFilePath))
+                {
+                    throw new FileNotFoundException(tempFilePath+" doesn't exist!");
+                }
+
+                //read the chunk file, and write into the final video file
+                byte[] chunkData = Files.readAllBytes(tempFilePath);
                 outputStream.write(chunkData);
 
-                // 删除临时文件
+                //delete the chunk file
                 Files.deleteIfExists(tempFilePath);
             }
         }

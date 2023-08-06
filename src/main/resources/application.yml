@@ -36,8 +36,8 @@ spring:
 
   servlet:
     multipart:
-      max-file-size: 500MB
-      max-request-size: 500MB
+      max-file-size: 128MB
+      max-request-size: 128MB
 
   #the config of kafka
   kafka:

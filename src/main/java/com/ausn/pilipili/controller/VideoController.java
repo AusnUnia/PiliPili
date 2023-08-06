@@ -20,7 +20,7 @@ public class VideoController
     @PostMapping("/upload")
     public Result upload(MultipartHttpServletRequest request)
     {
-        return videoService.upload2(request);
+        return videoService.upload(request);
     }
 
 

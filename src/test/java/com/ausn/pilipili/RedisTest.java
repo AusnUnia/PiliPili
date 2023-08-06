@@ -6,6 +6,7 @@ import com.ausn.pilipili.dao.VideoVoteDao;
 import com.ausn.pilipili.entity.VideoVote;
 import com.ausn.pilipili.utils.constants.RedisConstants;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RBloomFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -28,6 +29,9 @@ public class RedisTest
     @Autowired
     VideoVoteDao videoVoteDao;
 
+    @Autowired
+    RBloomFilter<String> bloomFilter;
+
     @Test
     void test()
     {
@@ -42,6 +46,13 @@ public class RedisTest
                         .setFieldValueEditor((field,val)->val.toString())
         );
         /*stringRedisTemplate.opsForHash().putAll(RedisConstants.VIDEO_VOTE_CACHE_KEY_PREFIX+bv+":"+userId,videoVoteMap);*/
+    }
+
+    @Test
+    void addBloomFilter()
+    {
+        String bv="JHSbeRZ9NiG";
+        bloomFilter.add("JHSbeRZ9NiG");
     }
 
 }
