@@ -3,7 +3,7 @@ package com.ausn.pilipili.utils.interceptor;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.ausn.pilipili.entity.dto.PUserDTO;
-import com.ausn.pilipili.utils.constants.RedisConstants;
+import com.ausn.pilipili.common.constants.RedisConstants;
 import com.ausn.pilipili.utils.UserHolder;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.web.servlet.HandlerInterceptor;

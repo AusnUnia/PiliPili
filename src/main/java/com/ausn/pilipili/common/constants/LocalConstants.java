@@ -1,4 +1,4 @@
-package com.ausn.pilipili.utils.constants;
+package com.ausn.pilipili.common.constants;
 
 public class LocalConstants
 {

@@ -3,15 +3,17 @@ package com.ausn.pilipili.task;
 import com.ausn.pilipili.dao.VideoDao;
 import com.ausn.pilipili.dao.VideoVoteDao;
 import com.ausn.pilipili.entity.VideoVote;
-import com.ausn.pilipili.utils.constants.RedisConstants;
+import com.ausn.pilipili.common.constants.RedisConstants;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.interceptor.TransactionAspectSupport;
 
 import java.util.Set;
+import java.util.concurrent.*;
 
 
 /**
@@ -29,85 +31,130 @@ public class ScheduledTask
     private VideoDao videoDao;
     @Autowired
     private VideoVoteDao videoVoteDao;
+    @Autowired
+    private RedissonClient redissonClient;
 
+
+    static private final ExecutorService SCHEDULED_TASK_EXECUTOR;
+
+    static
+    {
+        SCHEDULED_TASK_EXECUTOR=new ThreadPoolExecutor(
+                4,4,
+                0, TimeUnit.MINUTES,
+                new ArrayBlockingQueue<>(16),
+                new ThreadPoolExecutor.CallerRunsPolicy()
+        );
+    }
 
     @Scheduled(cron = "0 0 0 * * ?") // 每天零点触发任务
     public void expireKeyAtMidnight()
     {
-        Set<String> keys = stringRedisTemplate.keys( RedisConstants.VIDEO_COIN_TODAY_CACHE_KEY_PREFIX+ "*");
-        if(keys!=null&&!keys.isEmpty())
+        RLock lock = redissonClient.getLock(RedisConstants.EXPIRE_KEY_AT_MIDNIGHT_LOCK);
+        boolean locked= lock.tryLock();
+        if(locked)
         {
-            stringRedisTemplate.delete(keys);
+            try
+            {
+                Set<String> keys = stringRedisTemplate.keys( RedisConstants.VIDEO_COIN_TODAY_CACHE_KEY_PREFIX+ "*");
+                if(keys!=null&&!keys.isEmpty())
+                {
+                    stringRedisTemplate.delete(keys);
+                }
+            }
+            finally
+            {
+                lock.unlock();
+            }
         }
     }
 
 
-    @Scheduled(fixedRate = 60000) //每60秒执行一次
+    @Scheduled(fixedRate = 180000) //每180秒执行一次
     @Transactional
     public void persistData()
     {
-        persistVote(RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX);
-        persistVote(RedisConstants.VIDEO_DOWNVOTE_CACHE_KEY_PREFIX);
-        persistVote(RedisConstants.VIDEO_NOVOTE_CACHE_KEY_PREFIX);
+        RLock lock = redissonClient.getLock(RedisConstants.PERSIST_DATA_LOCK);
+        boolean locked= lock.tryLock();
+        if(locked)
+        {
+            try
+            {
+                persistVote(RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX);
+                persistVote(RedisConstants.VIDEO_DOWNVOTE_CACHE_KEY_PREFIX);
+                persistVote(RedisConstants.VIDEO_NOVOTE_CACHE_KEY_PREFIX);
+            }
+            finally
+            {
+                lock.unlock();
+            }
+        }
     }
 
-    private void persistVote(String prefix)
+    @Transactional
+    public void persistVote(String prefix)
     {
         Set<String> keys = stringRedisTemplate.keys(prefix + "*");
         if(keys!=null&&!keys.isEmpty())
         {
             for(String key:keys)
             {
-                String bv=key.substring(prefix.length());
-                Set<String> members = stringRedisTemplate.opsForSet().members(key);
-                int voteNum=members.size();
+                SCHEDULED_TASK_EXECUTOR.submit( ()->{updateVoteInMysql(prefix,key);} );
+            }
+        }
+    }
 
-                //update the vote number in table videos
-                if(prefix.equals(RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX))
-                {
-                    if(videoDao.setUpvoteNumByBv(bv,voteNum)==0)
-                    {
-                        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                    }
-                }
-                else if(prefix.equals(RedisConstants.VIDEO_DOWNVOTE_CACHE_KEY_PREFIX))
-                {
-                    if(videoDao.setDownvoteNumByBv(bv,voteNum)==0)
-                    {
-                        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                    }
-                }
+    @Transactional
+    public void updateVoteInMysql(String prefix,String key)
+    {
+        String bv=key.substring(prefix.length());
+        Set<String> members = stringRedisTemplate.opsForSet().members(key);
+        int voteNum=members.size();
 
-                //update the vote relationship in table video_votes
-                for(String member:members)
-                {
-                    Long userId=Long.valueOf(member);
-                    VideoVote videoVote = videoVoteDao.getByBvUserId(bv, userId);
-                    if(videoVote==null)
-                    {
-                        videoVote=new VideoVote();
-                        videoVote.setBv(bv);
-                        videoVote.setUserId(userId);
-                    }
+        //update the vote number in table videos
+        if(prefix.equals(RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX))
+        {
+            if(videoDao.setUpvoteNumByBv(bv,voteNum)==0)
+            {
+                throw new RuntimeException("Failed to update upvote number in table videos");
+            }
+        }
+        else if(prefix.equals(RedisConstants.VIDEO_DOWNVOTE_CACHE_KEY_PREFIX))
+        {
+            if(videoDao.setDownvoteNumByBv(bv,voteNum)==0)
+            {
+                throw new RuntimeException("Failed to update downvote number in table videos");
+            }
+        }
 
-                    if(prefix.equals(RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX))
-                    {
-                        videoVote.setVote(1);
-                    }
-                    else if(prefix.equals(RedisConstants.VIDEO_NOVOTE_CACHE_KEY_PREFIX))
-                    {
-                        videoVote.setVote(0);
-                    }
-                    else
-                    {
-                        videoVote.setVote(-1);
-                    }
+        //update the vote relationship in table video_votes
+        for(String member:members)
+        {
+            Long userId=Long.valueOf(member);
+            VideoVote videoVote = videoVoteDao.getByBvUserId(bv, userId);
+            if(videoVote==null)
+            {
+                videoVote=new VideoVote();
+                videoVote.setBv(bv);
+                videoVote.setUserId(userId);
+            }
 
-                    if(videoVoteDao.update(videoVote)==0)
-                    {
-                        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                    }
-                }
+            if(prefix.equals(RedisConstants.VIDEO_UPVOTE_CACHE_KEY_PREFIX))
+            {
+                videoVote.setVote(1);
+            }
+            else if(prefix.equals(RedisConstants.VIDEO_NOVOTE_CACHE_KEY_PREFIX))
+            {
+                videoVote.setVote(0);
+            }
+            else
+            {
+                videoVote.setVote(-1);
+            }
+
+            if(videoVoteDao.update(videoVote)==0)
+            {
+                throw new RuntimeException("Failed to update vote relationship in table video_votes");
             }
         }
     }

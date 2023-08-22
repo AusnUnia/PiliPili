@@ -1,6 +1,7 @@
 package com.ausn.pilipili.dao;
 
 import com.ausn.pilipili.entity.Video;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -10,7 +11,7 @@ import java.sql.Timestamp;
 import java.util.List;
 
 @Mapper
-public interface VideoDao
+public interface VideoDao extends BaseMapper<Video>
 {
     public int save(Video video) throws SQLException;
     public int delete(Video video);

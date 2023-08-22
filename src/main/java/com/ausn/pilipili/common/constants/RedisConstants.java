@@ -1,4 +1,4 @@
-package com.ausn.pilipili.utils.constants;
+package com.ausn.pilipili.common.constants;
 
 public class RedisConstants
 {
@@ -24,4 +24,7 @@ public class RedisConstants
     static public final String VIDEO_COIN_NUM_LOCK_KEY_PREFIX="lock:video_coin_num:";//usage: key is lock:video_coin_num:<bv>, value is determined by Redisson.
                                                                                     // Used to reconstruct the cache of "video_coin_num:"
     static public final String VIDEO_FAVORITE_CACHE_KEY_PREFIX="video_favorite:";//usage: key is video_upvote:<bv>, value is a set which contains users who upvoted this video.
+
+    static public final String EXPIRE_KEY_AT_MIDNIGHT_LOCK="expire_key_at_midnight";
+    static public final String PERSIST_DATA_LOCK="persist_data";
 }

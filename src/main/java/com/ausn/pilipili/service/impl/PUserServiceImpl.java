@@ -11,9 +11,10 @@ import com.ausn.pilipili.entity.dto.LoginFormDTO;
 import com.ausn.pilipili.entity.dto.PUserDTO;
 import com.ausn.pilipili.entity.PUser;
 import com.ausn.pilipili.service.PUserService;
-import com.ausn.pilipili.utils.constants.LocalConstants;
+import com.ausn.pilipili.common.constants.LocalConstants;
 import com.ausn.pilipili.utils.PUserUtil;
-import com.ausn.pilipili.utils.constants.RedisConstants;
+import com.ausn.pilipili.common.constants.RedisConstants;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -28,7 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
-public class PUserServiceImpl implements PUserService
+public class PUserServiceImpl extends ServiceImpl<PUserDao,PUser> implements PUserService
 {
     @Autowired
     private StringRedisTemplate stringRedisTemplate;

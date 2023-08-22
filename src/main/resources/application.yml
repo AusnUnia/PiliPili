@@ -5,6 +5,11 @@ mybatis:
 
   type-aliases-package: com.ausn.pilipili.entity
 
+mybatis-plus:
+  mapper-locations: classpath*:/mappers/*.xml
+  type-aliases-package: com.ausn.pilipili.entity
+
+
 server:
   port: 8080
 
@@ -49,9 +54,11 @@ spring:
       acks: 1
       retries: 1
 
+    consumer:
+      enable-auto-commit: false
+
     listener:
-      concurrency: 4
-      
+      ack-mode: manual
 
 logging:
   level:

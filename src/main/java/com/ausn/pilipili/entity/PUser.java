@@ -1,5 +1,6 @@
 package com.ausn.pilipili.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.sql.Date;
@@ -18,6 +19,7 @@ create table pusers
 
 
 @Data
+@TableName("pusers")
 public class PUser
 {
     private Long uid; //用户id 11位数字

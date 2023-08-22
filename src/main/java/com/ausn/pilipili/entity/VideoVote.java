@@ -1,5 +1,6 @@
 package com.ausn.pilipili.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /*
@@ -17,6 +18,7 @@ create table video_votes
 )
 */
 @Data
+@TableName("user_votes")
 public class VideoVote
 {
     private String bv;

@@ -1,5 +1,6 @@
 package com.ausn.pilipili.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.math.BigInteger;
@@ -27,6 +28,7 @@ create table videos
 */
 
 @Data
+@TableName("videos")
 public class Video {
     private String bv; //视频编号 11位数字或字母
     private String title; //标题

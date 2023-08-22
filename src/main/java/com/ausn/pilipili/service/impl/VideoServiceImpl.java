@@ -15,8 +15,9 @@ import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
 import com.ausn.pilipili.service.VideoService;
 import com.ausn.pilipili.utils.BvGenerator;
 import com.ausn.pilipili.utils.UserHolder;
-import com.ausn.pilipili.utils.constants.LocalConstants;
-import com.ausn.pilipili.utils.constants.RedisConstants;
+import com.ausn.pilipili.common.constants.LocalConstants;
+import com.ausn.pilipili.common.constants.RedisConstants;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -28,7 +29,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -41,13 +41,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service
-public class VideoServiceImpl implements VideoService
+public class VideoServiceImpl extends ServiceImpl<VideoDao,Video> implements VideoService
 {
     @Autowired
     private VideoDao videoDao;
@@ -71,98 +69,14 @@ public class VideoServiceImpl implements VideoService
         UPVOTE_SCRIPT.setResultType(Long.class);
     }
 
-
-
     @Autowired
     private BvGenerator bvGenerator;
-
-
-
-    private static final ExecutorService CACHE_REBUILD_EXECUTOR= Executors.newFixedThreadPool(8);
-
 
     /*
     upload the whole video file in one request
      */
-    @Override
-    @Transactional
-    public Result uploadWhole(MultipartHttpServletRequest request)
-    {
-        //parse the video file
-        MultipartFile videoFile = request.getFile("video");
-        if(videoFile==null||videoFile.isEmpty())
-        {
-            return Result.fail("the video file is empty!");
-        }
 
-        //parse the VideoUploadRequest which contains the title, description and tags of the uploading video
-        String jsonStr = request.getParameter("videoUploadRequest");
-        VideoUploadRequest videoUploadRequest=JSON.parseObject(jsonStr,VideoUploadRequest.class);
-
-        //generate the bv for the video.
-        String bv= bvGenerator.generateBv();
-
-        //create the path for video file
-        String resourcesPath= LocalConstants.VIDEO_SRC_PATH;
-
-        String relativePath=LocalConstants.VIDEO_RELATIVE_PATH_PREFIX
-                + bv+ LocalConstants.VIDEO_RELATIVE_PATH_SUFFIX; //the front end server can find the source of the video through this path
-
-        //create the entity of the video which will be stored in mysql
-        Video video= createNewVideo(videoUploadRequest,bv);
-
-
-        //save the video information in mysql. the bv may duplicate , so when first duplicate occur, generate another bv.
-        try
-        {
-            videoDao.save(video);
-        }
-        catch (SQLException e)
-        {
-            if(e.getErrorCode()==1062) //the primary key is duplicated, try to generate a new bv
-            {
-                bv=bvGenerator.generateBv();
-                video.setBv(bv);
-                try
-                {
-                    videoDao.save(video);
-                }
-                catch (SQLException ex)
-                {
-                    if(ex.getErrorCode()==1062)
-                    {
-                        return Result.fail(ResultCode.SAVE_ERR,"failed to save video! bv duplicated!");
-                    }
-                    return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
-                }
-            }
-            else
-            {
-                return Result.fail(ResultCode.SAVE_ERR,"failed to save video!");
-            }
-        }
-
-        //save the video file
-        String videoFilePath=resourcesPath+relativePath;
-        try
-        {
-            videoFile.transferTo(new File(videoFilePath));
-        }
-        catch (IOException e)
-        {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly(); //failed to save the video file, rollback this service
-        }
-
-        //save the bv into bloom filter
-        if(!bloomFilter.add(bv))
-        {
-            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-        }
-
-        return Result.ok(ResultCode.SAVE_OK);
-    }
-
-    @Override
+/*    @Override
     @Transactional
     public Result upload(MultipartHttpServletRequest request)
     {
@@ -236,15 +150,11 @@ public class VideoServiceImpl implements VideoService
         }
 
         return Result.ok(ResultCode.SAVE_OK);
-    }
+    }*/
 
-    private void handleChunk(MultipartHttpServletRequest request)
+    @Override
+    public void handleChunk(MultipartFile chunkFile, Long seqNum, String videoId)
     {
-        //parse the information about the chunk file
-        MultipartFile chunkFile = request.getFile("chunk");
-        Long seqNum=Long.valueOf(request.getParameter("seqNum"));
-        String videoId=request.getParameter("videoId");
-
         // create the path for chunk file
         Path tempFilePath = Path.of(LocalConstants.VIDEO_TMP_PATH, videoId+"_"+seqNum + ".part");
 
@@ -257,6 +167,57 @@ public class VideoServiceImpl implements VideoService
         {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    @Transactional
+    public String createNewVideoAndSave(VideoUploadRequest videoUploadRequest)
+    {
+        //allocate a bv and create the video entity
+        String bv=bvGenerator.generateBv();
+        Video video=createNewVideo(videoUploadRequest,bv);
+
+        //save the video information in mysql. the bv may duplicate, so when first duplicate occur, generate another bv.
+        try
+        {
+            videoDao.save(video);
+        }
+        catch (SQLException e)
+        {
+            if(e.getErrorCode()==1062) //the primary key is duplicated, try to generate a new bv
+            {
+                bv=bvGenerator.generateBv();
+                video.setBv(bv);
+                try
+                {
+                    videoDao.save(video);
+                }
+                catch (SQLException ex)
+                {
+                    if(ex.getErrorCode()==1062)
+                    {
+                        System.out.println("duplicated bv!");
+                    }
+
+                    TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                    return null;
+                }
+            }
+            else
+            {
+                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+                return null;
+            }
+        }
+
+        //add the bv of the new video into bloom filter
+        if(!bloomFilter.add(bv))
+        {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return null;
+        }
+
+        return bv;
     }
 
     private Video createNewVideo(VideoUploadRequest videoUploadRequest,String bv)
@@ -283,13 +244,9 @@ public class VideoServiceImpl implements VideoService
         return video;
     }
 
-    private void mergeChunks(String bv,MultipartHttpServletRequest request) throws IOException, InterruptedException
+    @Override
+    public void mergeChunks(String bv, Long chunkSize, Long totalSize, String videoId) throws IOException, InterruptedException
     {
-        //parse the information about the video file
-        String videoId = request.getParameter("videoId");
-        Long totalSize=Long.valueOf(request.getParameter("totalSize"));
-        Long chunkSize=Long.valueOf(request.getParameter("chunkSize"));
-
         //create a directory for the final video file
         Path videoFilePath = Path.of(LocalConstants.VIDEO_SRC_PATH,"BV"+bv+".mp4");
 
@@ -327,6 +284,7 @@ public class VideoServiceImpl implements VideoService
         }
     }
 
+
     @Override
     public Result delete(Video video)
     {
@@ -339,7 +297,7 @@ public class VideoServiceImpl implements VideoService
     }
 
     @Override
-    public Result getByBv(String bv)
+    public Video getByBv(String bv)
     {
         /*
         TODO 要抽象出一个查询函数，传入要查数据的key，回调函数（查数据库用），回调函数的参数，等。这个查询函数逻辑是这样的：
@@ -355,7 +313,7 @@ public class VideoServiceImpl implements VideoService
         if(!bloomFilter.contains(bv))
         {
             System.out.println("bloom filter rejected!");
-            return Result.fail(ResultCode.GET_ERR,"no such video!");
+            return null;
         }
 
         //the request passed the bloom filter, then query it in redis
@@ -363,7 +321,7 @@ public class VideoServiceImpl implements VideoService
         if(StrUtil.isNotBlank(videoJson))
         {
             video= JSON.parseObject(videoJson,Video.class);
-            return Result.ok(ResultCode.GET_OK,video);
+            return video;
         }
 
         //can't find in redis, must query mysql.
@@ -379,10 +337,10 @@ public class VideoServiceImpl implements VideoService
                 if(video==null)
                 {
                     stringRedisTemplate.opsForValue().set(key,"",RedisConstants.VIDEO_CACHE_TTL, TimeUnit.MINUTES);
-                    return Result.fail(ResultCode.GET_ERR,"no such video!");
+
                 }
                 stringRedisTemplate.opsForValue().set(key,JSON.toJSONString(video),RedisConstants.VIDEO_CACHE_TTL, TimeUnit.MINUTES);
-                return Result.ok(ResultCode.GET_OK,video);
+                return video;
             }
             finally
             {
@@ -390,7 +348,7 @@ public class VideoServiceImpl implements VideoService
             }
         }
 
-        return Result.fail(ResultCode.GET_ERR,"no such video!");
+        return null;
     }
 
     @Override
@@ -425,12 +383,17 @@ public class VideoServiceImpl implements VideoService
     }
 
     @Override
-    public Result upvote(String bv)
+    public Long upvote(String bv)
     {
         /**
          * upvote operation only update the upvote number in redis, and the data in redis will
          * be written into mysql by scheduled task
          */
+
+        if(!bloomFilter.contains(bv))
+        {
+            return null;
+        }
 
         //get current user's id
         Long userId=UserHolder.getUser().getUid();
@@ -452,20 +415,22 @@ public class VideoServiceImpl implements VideoService
         //if the user has upvoted, cancel the upvote
         if(stringRedisTemplate.opsForSet().isMember(upvoteKey,userId.toString()))
         {
-            stringRedisTemplate.opsForSet().remove(upvoteKey,userId.toString());
-            stringRedisTemplate.opsForSet().add(novoteKey,userId.toString());
+            Long remove=stringRedisTemplate.opsForSet().remove(upvoteKey,userId.toString());
+            Long add=stringRedisTemplate.opsForSet().add(novoteKey,userId.toString());
+            System.out.println("removed:"+remove+"  added:"+add);
         }
         //if the user has not upvoted, do upvote
         else
         {
-            stringRedisTemplate.opsForSet().add(upvoteKey,userId.toString());
-            stringRedisTemplate.opsForSet().remove(novoteKey,userId.toString());
+            Long add=stringRedisTemplate.opsForSet().add(upvoteKey,userId.toString());
+            Long remove=stringRedisTemplate.opsForSet().remove(novoteKey,userId.toString());
+            System.out.println("added:"+add+"  removed:"+remove);
         }
 
         //return the refreshed upvote number
         Long upvoteNum=stringRedisTemplate.opsForSet().size(upvoteKey);
 
-        return Result.ok(ResultCode.UPDATE_OK,upvoteNum);
+        return upvoteNum;
     }
 
     @Transactional
@@ -480,12 +445,6 @@ public class VideoServiceImpl implements VideoService
     @Transactional
     public Result coin(String bv, int num)
     {
-        //the coin number should not be lager than 2
-        if(num>2||num<1)
-        {
-            return Result.fail("can only put 1 or 2 coins every time!");
-        }
-
         //get current user's id
         Long userId= UserHolder.getUser().getUid();
 
@@ -558,12 +517,12 @@ public class VideoServiceImpl implements VideoService
     }
 
     @Override
-    public Result getUpvoteNumByBv(String bv)
+    public Long getUpvoteNumByBv(String bv)
     {
         //see if in bloom filter
         if(!bloomFilter.contains(bv))
         {
-            return Result.fail(ResultCode.GET_ERR,"the video doesn't exist!");
+            return null;
         }
 
         //then, see if in redis
@@ -590,7 +549,7 @@ public class VideoServiceImpl implements VideoService
 
         Long upvoteNum = stringRedisTemplate.opsForSet().size(key);
 
-        return Result.ok(ResultCode.GET_OK,upvoteNum);
+        return upvoteNum;
     }
 
     @Override
@@ -643,6 +602,7 @@ public class VideoServiceImpl implements VideoService
 
         return Result.ok(ResultCode.GET_OK,coinNum);
     }
+
 
 
     private void loadVoteIntoRedis(String bv)

@@ -4,7 +4,6 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.bean.copier.CopyOptions;
 import com.ausn.pilipili.dao.VideoVoteDao;
 import com.ausn.pilipili.entity.VideoVote;
-import com.ausn.pilipili.utils.constants.RedisConstants;
 import org.junit.jupiter.api.Test;
 import org.redisson.api.RBloomFilter;
 import org.springframework.beans.factory.annotation.Autowired;

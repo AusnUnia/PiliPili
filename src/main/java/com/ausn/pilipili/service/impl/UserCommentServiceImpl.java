@@ -1,5 +1,6 @@
 package com.ausn.pilipili.service.impl;
 
+import cn.hutool.core.lang.Snowflake;
 import com.alibaba.fastjson2.JSON;
 import com.ausn.pilipili.common.Result;
 import com.ausn.pilipili.common.ResultCode;
@@ -9,9 +10,12 @@ import com.ausn.pilipili.entity.UserComment;
 import com.ausn.pilipili.entity.requestEntity.CommentPublishRequest;
 import com.ausn.pilipili.service.UserCommentService;
 import com.ausn.pilipili.utils.UserHolder;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +26,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-public class UserCommentServiceImpl implements UserCommentService
+public class UserCommentServiceImpl extends ServiceImpl<UserCommentDao,UserComment> implements UserCommentService
 {
     @Autowired
     private UserCommentDao userCommentDao;
@@ -32,6 +36,10 @@ public class UserCommentServiceImpl implements UserCommentService
 
     @Autowired
     private KafkaTemplate<String,String> kafkaTemplate;
+
+    @Autowired
+    @Qualifier("snowflake")
+    private Snowflake snowflake;
 
     @Override
     public Result publish(CommentPublishRequest commentPublishRequest)
@@ -70,7 +78,7 @@ public class UserCommentServiceImpl implements UserCommentService
                 {
                     //TODO 用WebSocket异步通知给前端
                     System.out.println("评论发送失败！！！！！");
-
+                    throw new RuntimeException("评论发送失败！！");
                 }
             }
         );
@@ -78,18 +86,29 @@ public class UserCommentServiceImpl implements UserCommentService
         return Result.ok(ResultCode.DEFAULT_OK,"评论已发送");
     }
 
-    @KafkaListener(topics = "comment_topic",groupId = "comment_group")
+    @KafkaListener(topics = "comment_topic",groupId = "comment_group",concurrency = "4")
     @Transactional
-    public void saveCommentToMysql(String userCommentStr)
+    public void saveCommentToMysql(String userCommentStr, Acknowledgment acknowledgment)
     {
         UserComment userComment=JSON.parseObject(userCommentStr,UserComment.class);
-        userCommentDao.save(userComment);
-        videoDao.updateCommentNumByBv(userComment.getBv(),1);
+
+        //to avoid consume repeatedly
+        boolean consumed = query().eq("commentId", userComment.getCommentId()).exists();
+        if(!consumed)
+        {
+            userCommentDao.save(userComment);
+            videoDao.updateCommentNumByBv(userComment.getBv(),1);
+        }
+        //TODO 要关闭自动提交偏移量，手动提交偏移量，最好是异步+同步的提交方式，防止消费者消费时重复消费或者丢失消息。 还需要做成幂等方案
+        //submit offset manually
+        acknowledgment.acknowledge();
+
     }
 
     private UserComment createUserComment(String bv,Long userId)
     {
         UserComment userComment=new UserComment();
+        userComment.setCommentId(snowflake.nextId());
         userComment.setUserId(userId);
         userComment.setBv(bv);
         userComment.setSendDate(Timestamp.valueOf(LocalDateTime.now()));

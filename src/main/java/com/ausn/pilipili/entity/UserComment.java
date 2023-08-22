@@ -1,5 +1,6 @@
 package com.ausn.pilipili.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.math.BigInteger;
@@ -20,6 +21,7 @@ create table comments
 */
 
 @Data
+@TableName("user_comments")
 public class UserComment
 {
     private Long commentId; //评论编号

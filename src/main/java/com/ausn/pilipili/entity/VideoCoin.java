@@ -1,5 +1,6 @@
 package com.ausn.pilipili.entity;
 
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 import java.sql.Date;
@@ -9,6 +10,7 @@ import java.sql.Timestamp;
 the relationship between user saved or not and video
  */
 @Data
+@TableName("user_coins")
 public class VideoCoin
 {
     private Long id;

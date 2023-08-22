@@ -2,7 +2,11 @@ package com.ausn.pilipili.service;
 
 import com.ausn.pilipili.common.Result;
 import com.ausn.pilipili.entity.Video;
-import org.springframework.web.multipart.MultipartHttpServletRequest;
+import com.ausn.pilipili.entity.requestEntity.VideoUploadRequest;
+import com.baomidou.mybatisplus.extension.service.IService;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 
 /**
@@ -11,18 +15,19 @@ import org.springframework.web.multipart.MultipartHttpServletRequest;
  * @Description:
  */
 
-public interface VideoService
+public interface VideoService extends IService<Video>
 {
-    public Result uploadWhole(MultipartHttpServletRequest request);
-    public Result upload(MultipartHttpServletRequest request);
+    public void handleChunk(MultipartFile chunkFile, Long seqNum, String videoId);
+    public void mergeChunks(String bv, Long chunkSize, Long totalSize, String videoId) throws IOException, InterruptedException;
     public Result delete(Video video);
-    public Result getByBv(String bv);
+    public Video getByBv(String bv);
     public Result getByAuthorId(String authorId);
     public Result getRandomly();
-    public Result upvote(String bv);
+    public Long upvote(String bv);
     public Result downvote(String bv);
     public Result coin(String bv, int num);
     public Result favorite(String bv);
-    public Result getUpvoteNumByBv(String bv);
+    public Long getUpvoteNumByBv(String bv);
     public Result getCoinNumByBv(String bv);
+    public String createNewVideoAndSave(VideoUploadRequest videoUploadRequest);
 }
