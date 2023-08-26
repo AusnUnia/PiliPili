@@ -10,4 +10,10 @@ public interface PUserService extends IService<PUser>
     Result login(LoginFormDTO loginFormDTO);
 
     Result sendVerificationCode(String phoneNumber);
+
+    PUser createUserWithPhoneNumber(String phoneNumber);
+
+    boolean confirmVerificationCode(String phoneNumber, String verificationCode);
+
+    PUser createUserWithPhoneNumberAndPassword(String phoneNumber, String password);
 }

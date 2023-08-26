@@ -28,4 +28,6 @@ public class PUser
     private String gender; //性别
     private Date birthday; //生日
     private String avatarPath; //头像存放位置
+    private String password;
+    private String salt;
 }

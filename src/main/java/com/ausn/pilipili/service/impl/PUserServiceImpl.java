@@ -16,6 +16,7 @@ import com.ausn.pilipili.utils.PUserUtil;
 import com.ausn.pilipili.common.constants.RedisConstants;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -37,6 +38,7 @@ public class PUserServiceImpl extends ServiceImpl<PUserDao,PUser> implements PUs
     private PUserDao pUserDao;
 
     @Transactional
+    @Override
     public PUser createUserWithPhoneNumber(String phoneNumber)
     {
         PUser pUser=new PUser();
@@ -50,6 +52,46 @@ public class PUserServiceImpl extends ServiceImpl<PUserDao,PUser> implements PUs
 
         return pUser;
     }
+
+    @Override
+    @Transactional
+    public PUser createUserWithPhoneNumberAndPassword(String phoneNumber, String password)
+    {
+        PUser pUser=new PUser();
+        pUser.setPhoneNumber(phoneNumber);
+        pUser.setNickName(LocalConstants.PUSER_NICK_NAME_PREFIX+RandomUtil.randomNumbers(11));
+        pUser.setAvatarPath("./images/avatars/default.jpg");
+        pUser.setGender("unknown");
+        pUser.setBirthday(Date.valueOf(LocalDate.now()));
+
+        String salt = RandomUtil.randomString(16);
+        pUser.setSalt(salt);
+
+        String encodedPassword= DigestUtils.sha256Hex(password+salt);
+        pUser.setPassword(encodedPassword);
+        pUserDao.save(pUser);
+        pUser.setUid(pUserDao.getLastInsertedId());
+
+        return pUser;
+    }
+
+    @Override
+    public boolean confirmVerificationCode(String phoneNumber, String verificationCode)
+    {
+        String cachedCode=stringRedisTemplate.opsForValue()
+                .get(RedisConstants.LOGIN_CODE_KEY_PREFIX+phoneNumber);
+
+        //if the cached verification code is not consistent with the verification code
+        if(cachedCode==null||!cachedCode.equals(verificationCode))
+        {
+            System.out.println("cached:"+cachedCode);
+            System.out.println("verificationCode:"+verificationCode);
+            return false;
+        }
+
+        return true;
+    }
+
 
     @Override
     public Result login(LoginFormDTO loginFormDTO)
