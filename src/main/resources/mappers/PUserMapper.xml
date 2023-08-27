@@ -17,24 +17,10 @@
     </select>
 
     <select id="getByPhoneNumber" resultType="com.ausn.pilipili.entity.PUser">
-        select * from pusers where phoneNumber=#{phoneNumber}
+        select * from pusers where phone_number=#{phoneNumber}
     </select>
 
 
-    <update id="update">
-        update pusers
-        <set>
-            uid=#{uid},
-            phoneNumber=#{phoneNumber},
-            nickName=#{nickName},
-            gender=#{gender},
-            birthday=#{birthday},
-            avatarPath=#{avatarPath}
-        </set>
-        <where>
-            uid=#{uid}
-        </where>
-    </update>
 
     <select id="getLastInsertedId" resultType="long">
         SELECT LAST_INSERT_ID();

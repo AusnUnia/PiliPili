@@ -84,7 +84,7 @@ public class UserCommentServiceImpl extends ServiceImpl<UserCommentDao,UserComme
         return Result.ok(ResultCode.DEFAULT_OK,"评论已发送");
     }
 
-    @KafkaListener(topics = "comment_topic",groupId = "comment_group",concurrency = "4")
+    @KafkaListener(topics = "comment_topic",groupId = "comment_group",concurrency = "8")
     @Transactional
     public void saveCommentToMysql(String userCommentStr, Acknowledgment acknowledgment)
     {
@@ -92,6 +92,10 @@ public class UserCommentServiceImpl extends ServiceImpl<UserCommentDao,UserComme
 
         //to avoid consume repeatedly
         boolean consumed = query().eq("commentId", userComment.getCommentId()).exists();
+        if(consumed)
+        {
+            System.out.println("comment id 重复了！！！");
+        }
         if(!consumed)
         {
             userCommentDao.save(userComment);

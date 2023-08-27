@@ -50,7 +50,7 @@ spring:
       buffer-memory: 33554432
       compression-type: snappy
       acks: 1
-      retries: 1
+      retries: 3
 
     consumer:
       enable-auto-commit: false
@@ -66,3 +66,8 @@ logging:
   level:
     com:
       ausn: debug
+
+login:
+  types:
+    password: passwordLoginStrategy
+    sms: smsLoginStrategy

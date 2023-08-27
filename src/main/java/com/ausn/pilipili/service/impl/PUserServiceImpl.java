@@ -12,6 +12,8 @@ import com.ausn.pilipili.entity.dto.PUserDTO;
 import com.ausn.pilipili.entity.PUser;
 import com.ausn.pilipili.service.PUserService;
 import com.ausn.pilipili.common.constants.LocalConstants;
+import com.ausn.pilipili.strategy.login.LoginStrategy;
+import com.ausn.pilipili.strategy.login.LoginStrategyFactory;
 import com.ausn.pilipili.utils.PUserUtil;
 import com.ausn.pilipili.common.constants.RedisConstants;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -36,22 +38,8 @@ public class PUserServiceImpl extends ServiceImpl<PUserDao,PUser> implements PUs
     private StringRedisTemplate stringRedisTemplate;
     @Autowired
     private PUserDao pUserDao;
-
-    @Transactional
-    @Override
-    public PUser createUserWithPhoneNumber(String phoneNumber)
-    {
-        PUser pUser=new PUser();
-        pUser.setPhoneNumber(phoneNumber);
-        pUser.setNickName(LocalConstants.PUSER_NICK_NAME_PREFIX+RandomUtil.randomNumbers(11));
-        pUser.setAvatarPath("./images/avatars/default.jpg");
-        pUser.setGender("unknown");
-        pUser.setBirthday(Date.valueOf(LocalDate.now()));
-        pUserDao.save(pUser);
-        pUser.setUid(pUserDao.getLastInsertedId());
-
-        return pUser;
-    }
+    @Autowired
+    private LoginStrategyFactory loginStrategyFactory;
 
     @Override
     @Transactional
@@ -69,7 +57,7 @@ public class PUserServiceImpl extends ServiceImpl<PUserDao,PUser> implements PUs
 
         String encodedPassword= DigestUtils.sha256Hex(password+salt);
         pUser.setPassword(encodedPassword);
-        pUserDao.save(pUser);
+        save(pUser);
         pUser.setUid(pUserDao.getLastInsertedId());
 
         return pUser;
@@ -97,34 +85,22 @@ public class PUserServiceImpl extends ServiceImpl<PUserDao,PUser> implements PUs
     public Result login(LoginFormDTO loginFormDTO)
     {
         System.out.println(loginFormDTO);
-        //check the phone number
-        String phoneNumber= loginFormDTO.getPhoneNumber();
-        if(!PUserUtil.isPhoneNumberValid(phoneNumber))
-        {
-            return Result.fail(ResultCode.BUSINESS_ERR,"请输入正确的手机号");
-        }
 
-        //confirm the verification code
-        String cachedCode=stringRedisTemplate.opsForValue()
-                .get(RedisConstants.LOGIN_CODE_KEY_PREFIX+phoneNumber);
-        String verificationCode= loginFormDTO.getVerificationCode();
+        //login by type
+        LoginStrategy strategy = loginStrategyFactory.getStrategy(loginFormDTO.getType());
 
-        //if the cached verification code is not consistent with the verification code
-        if(cachedCode==null||!cachedCode.equals(verificationCode))
-        {
-            System.out.println("cached:"+cachedCode);
-            System.out.println("verificationCode:"+verificationCode);
-            return Result.fail("验证码错误");
-        }
+        PUser pUser = strategy.login(loginFormDTO);
 
-        //query the user by the phone number
-        PUser pUser= pUserDao.getByPhoneNumber(phoneNumber);
-        if(pUser==null)
-        {
-            //if didn't find the user, it's new user, create it and save in database
-            pUser=createUserWithPhoneNumber(phoneNumber);
-        }
+        //cache the information of the user in Redis
+        String token= saveUserInRedis(pUser);
 
+        //return the token to the front end
+        return Result.ok(ResultCode.DEFAULT_OK,token);
+    }
+
+
+    public String saveUserInRedis(PUser pUser)
+    {
         //cache the information of the user in Redis
 
         //generate token, this is the key to identify whether a user has logged in.
@@ -142,12 +118,10 @@ public class PUserServiceImpl extends ServiceImpl<PUserDao,PUser> implements PUs
         stringRedisTemplate.opsForHash().putAll(RedisConstants.LOGIN_PUSER_KEY_PREFIX+token,pUserMap);
 
         //set the login period of validity
-        stringRedisTemplate.expire(RedisConstants.LOGIN_PUSER_KEY_PREFIX+token,RedisConstants.LOGIN_PUSER_TTL,TimeUnit.MINUTES);
+        stringRedisTemplate.expire(RedisConstants.LOGIN_PUSER_KEY_PREFIX+token,RedisConstants.LOGIN_PUSER_TTL, TimeUnit.MINUTES);
 
-        //return the token to the front end
-        return Result.ok(ResultCode.DEFAULT_OK,token);
+        return token;
     }
-
 
 
     @Override

@@ -14,6 +14,5 @@ public interface PUserDao extends BaseMapper<PUser>
     public int delete(PUser pUser);
     public PUser getByUid(@Param("uid") Long uid);
     public PUser getByPhoneNumber(@Param("phoneNumber") String phoneNumber);
-    public int update(PUser pUser);
     public Long getLastInsertedId();
 }

@@ -11,8 +11,6 @@ public interface PUserService extends IService<PUser>
 
     Result sendVerificationCode(String phoneNumber);
 
-    PUser createUserWithPhoneNumber(String phoneNumber);
-
     boolean confirmVerificationCode(String phoneNumber, String verificationCode);
 
     PUser createUserWithPhoneNumberAndPassword(String phoneNumber, String password);

@@ -57,7 +57,7 @@ public class PUserController
 
 
         //query the user by the phone number
-        PUser pUser= pUserService.query().eq("phoneNumber",phoneNumber).one();
+        PUser pUser= pUserService.query().eq("phone_number",phoneNumber).one();
         if(pUser!=null)
         {
             return Result.fail("该手机号已经注册过了！");

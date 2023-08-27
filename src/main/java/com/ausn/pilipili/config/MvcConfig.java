@@ -22,22 +22,23 @@ public class MvcConfig implements WebMvcConfigurer
         registry.addInterceptor(new RefreshTokenInterceptor(stringRedisTemplate));
 
         registry.addInterceptor(new LoginInterceptor())
-                .excludePathPatterns(
-                        "/user/code",      // ask for verification code
-                        "/user/login",     //user login
-                        "/video/**",
-                        "/error",
-                        "/videos/upload",
-                        "/static/**"
-                );
+            .excludePathPatterns(
+                    "/user/code",      // ask for verification code
+                    "/user/login",     //user login
+                    "/video/**",
+                    "/error",
+                    "/videos/upload",
+                    "/static/**",
+                    "/user/register"
+            );
 
         registry.addInterceptor(new ReqLimitInterceptor(stringRedisTemplate))
-                .addPathPatterns(
-                        "/videos/upvote/**",
-                        "/videos/upvoteNum/**",
-                        "/videos/downvote**",
-                        "/comments/publish**"
-                );
+            .addPathPatterns(
+                    "/videos/upvote/**",
+                    "/videos/upvoteNum/**",
+                    "/videos/downvote**",
+                    "/comments/publish**"
+            );
     }
 
 }

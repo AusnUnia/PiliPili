@@ -8,4 +8,5 @@ public class LoginFormDTO
     private String phoneNumber;
     private String verificationCode;
     private String password;
+    private String type;
 }
