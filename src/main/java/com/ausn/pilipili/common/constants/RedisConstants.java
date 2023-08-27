@@ -27,4 +27,6 @@ public class RedisConstants
 
     static public final String EXPIRE_KEY_AT_MIDNIGHT_LOCK="lock:scheduled:expire_key_at_midnight";
     static public final String PERSIST_DATA_LOCK="lock:scheduled:persist_data";
+
+    static public final String REQUEST_LIMIT_KEY_PREFIX="request_limit:";
 }

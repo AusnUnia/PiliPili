@@ -69,14 +69,12 @@ public class UserCommentServiceImpl extends ServiceImpl<UserCommentDao,UserComme
                 @Override
                 public void onSuccess(SendResult<String, String> result)
                 {
-                    //TODO 用WebSocket异步通知给前端
                     System.out.println("评论发送成功！！！！！");
                 }
 
                 @Override
                 public void onFailure(Throwable ex)
                 {
-                    //TODO 用WebSocket异步通知给前端
                     System.out.println("评论发送失败！！！！！");
                     throw new RuntimeException("评论发送失败！！");
                 }
@@ -102,7 +100,6 @@ public class UserCommentServiceImpl extends ServiceImpl<UserCommentDao,UserComme
         //TODO 要关闭自动提交偏移量，手动提交偏移量，最好是异步+同步的提交方式，防止消费者消费时重复消费或者丢失消息。 还需要做成幂等方案
         //submit offset manually
         acknowledgment.acknowledge();
-
     }
 
     private UserComment createUserComment(String bv,Long userId)
